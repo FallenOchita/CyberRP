@@ -76,7 +76,7 @@ Requires the server credential in the bearer header.
 
 ## Current limitations / production work
 
-- In-memory storage only; PostgreSQL persistence and migrations are not implemented.
+- Without `DATABASE_URL`, the API uses in-memory storage. Set `DATABASE_URL` and apply the PostgreSQL migration to enable persistent storage; see `docs/POSTGRESQL.md`.
 - No player account system or user login yet.
 - No TLS termination, rate limiting, abuse reporting, moderation workflow, or audit log. Deploy behind a properly configured HTTPS reverse proxy only after those controls are added.
 - No server reachability probe; online status means a valid heartbeat was received, not that players can successfully connect.

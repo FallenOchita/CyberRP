@@ -20,6 +20,14 @@ export type PublicServer = ServerRegistration & {
 
 type StoredServer = PublicServer & { credentialHash: string };
 
+export type MaybePromise<T> = T | Promise<T>;
+export interface ServerRegistry {
+  register(input: ServerRegistration): MaybePromise<{ server: PublicServer; credential: string }>;
+  list(filters?: { search?: string; tag?: string }): MaybePromise<PublicServer[]>;
+  heartbeat(id: string, credential: string, playerCount: number): MaybePromise<PublicServer | null>;
+  remove(id: string, credential: string): MaybePromise<boolean>;
+}
+
 const HEARTBEAT_TIMEOUT_MS = 90_000;
 
 export function hashCredential(value: string): Buffer {
@@ -32,7 +40,7 @@ export function credentialsMatch(provided: string, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export class InMemoryServerRegistry {
+export class InMemoryServerRegistry implements ServerRegistry {
   private readonly servers = new Map<string, StoredServer>();
 
   register(input: ServerRegistration): { server: PublicServer; credential: string } {

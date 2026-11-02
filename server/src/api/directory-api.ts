@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistration } from "./server-registry";
+import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistry, type ServerRegistration } from "./server-registry";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -68,10 +68,11 @@ function registration(value: unknown): ServerRegistration {
 
 export type DirectoryApiOptions = {
   registrationKey: string;
-  registry?: InMemoryServerRegistry;
+  registry?: ServerRegistry;
+  storageMode?: "memory" | "postgres";
 };
 
-export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: InMemoryServerRegistry } {
+export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
   if (!options.registrationKey || options.registrationKey.length < 24) {
     throw new Error("CYBERRP_REGISTRATION_KEY must be configured with at least 24 characters.");
   }
@@ -81,14 +82,14 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
-      send(response, 200, { status: "ok", storage: "memory" });
+      send(response, 200, { status: "ok", storage: options.storageMode ?? "memory" });
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/v1/servers") {
       send(response, 200, {
-        servers: registry.list({ search: url.searchParams.get("search") ?? undefined, tag: url.searchParams.get("tag") ?? undefined }),
-        storage: "memory"
+        servers: await registry.list({ search: url.searchParams.get("search") ?? undefined, tag: url.searchParams.get("tag") ?? undefined }),
+        storage: options.storageMode ?? "memory"
       });
       return;
     }
@@ -99,7 +100,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
         return;
       }
       try {
-        const created = registry.register(registration(await readJson(request)));
+        const created = await registry.register(registration(await readJson(request)));
         send(response, 201, { server: created.server, credential: created.credential });
       } catch (error) {
         send(response, error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400, { error: "invalid_request" });
@@ -118,7 +119,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
         const body = object(await readJson(request));
         const playerCount = body.playerCount;
         if (!Number.isInteger(playerCount) || (playerCount as number) < 0 || (playerCount as number) > 10_000) throw new Error("INVALID_BODY");
-        const updated = registry.heartbeat(match[1], token, playerCount as number);
+        const updated = await registry.heartbeat(match[1], token, playerCount as number);
         if (!updated) {
           send(response, 404, { error: "server_not_found" });
           return;
@@ -136,7 +137,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
         send(response, 401, { error: "unauthorized" });
         return;
       }
-      if (!registry.remove(match[1], token)) {
+      if (!(await registry.remove(match[1], token))) {
         send(response, 404, { error: "server_not_found" });
         return;
       }
@@ -153,8 +154,30 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
 if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART === "1") {
   const port = Number(process.env.PORT ?? 8787);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be a valid TCP port.");
-  const { server } = createDirectoryApi({ registrationKey: process.env.CYBERRP_REGISTRATION_KEY });
-  server.listen(port, "0.0.0.0", () => {
-    process.stdout.write(`CyberRP directory API listening on port ${port} (in-memory registry).\n`);
+
+  void (async () => {
+    const registrationKey = process.env.CYBERRP_REGISTRATION_KEY!;
+    const databaseUrl = process.env.DATABASE_URL;
+    let registry: ServerRegistry = new InMemoryServerRegistry();
+    let storageMode: "memory" | "postgres" = "memory";
+    let pool: import("pg").Pool | undefined;
+
+    if (databaseUrl) {
+      const { Pool } = await import("pg");
+      pool = new Pool({ connectionString: databaseUrl, max: 10, idleTimeoutMillis: 30_000 });
+      await pool.query("SELECT 1");
+      const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
+      registry = new PostgresServerRegistry(pool);
+      storageMode = "postgres";
+    }
+
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode });
+    server.on("close", () => { void pool?.end(); });
+    server.listen(port, "0.0.0.0", () => {
+      process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);
+    });
+  })().catch((error: unknown) => {
+    process.stderr.write(`CyberRP directory API startup failed: ${error instanceof Error ? error.message : "unknown error"}\\n`);
+    process.exitCode = 1;
   });
 }
