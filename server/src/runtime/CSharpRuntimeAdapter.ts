@@ -99,12 +99,12 @@ export class CSharpRuntimeAdapter implements RuntimeAdapter {
 
       child.once("error", fail);
       child.once("exit", (code) => {
-        if (!settled) fail(new Error(\`C# worker exited before ready (code \${code}).\`));
+        if (!settled) fail(new Error(`C# worker exited before ready (code ${code}).`));
       });
       const request: HostRequest = {
         protocol: 1, id, type: "start", resourceName, entrypoint, permissions: []
       };
-      child.stdin.write(\`\${JSON.stringify(request)}\n\`);
+      child.stdin.write(`${JSON.stringify(request)}\n`);
     });
   }
 
@@ -112,16 +112,16 @@ export class CSharpRuntimeAdapter implements RuntimeAdapter {
     let stopping: Promise<void> | undefined;
     return {
       sendEvent: (eventName: string, payload: JsonValue) => {
-        if (child.exitCode !== null || child.killed) throw new Error(\`C# resource is not running: \${resourceName}\`);
+        if (child.exitCode !== null || child.killed) throw new Error(`C# resource is not running: ${resourceName}`);
         const request: HostRequest = { protocol: 1, id: randomUUID(), type: "event", eventName, payload };
-        child.stdin.write(\`\${JSON.stringify(request)}\n\`);
+        child.stdin.write(`${JSON.stringify(request)}\n`);
       },
       stop: () => {
         if (stopping) return stopping;
         stopping = new Promise<void>((resolveStop, rejectStop) => {
           const timer = setTimeout(() => {
             child.kill();
-            rejectStop(new Error(\`Timed out stopping C# resource: \${resourceName}\`));
+            rejectStop(new Error(`Timed out stopping C# resource: ${resourceName}`));
           }, this.shutdownTimeoutMs);
           child.once("exit", () => {
             clearTimeout(timer);
@@ -129,7 +129,7 @@ export class CSharpRuntimeAdapter implements RuntimeAdapter {
             resolveStop();
           });
           const request: HostRequest = { protocol: 1, id: randomUUID(), type: "stop" };
-          child.stdin.write(\`\${JSON.stringify(request)}\n\`);
+          child.stdin.write(`${JSON.stringify(request)}\n`);
         });
         return stopping;
       }
