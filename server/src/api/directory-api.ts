@@ -156,7 +156,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be a valid TCP port.");
 
   void (async () => {
-    const registrationKey = process.env.CYBERRP_REGISTRATION_KEY;
+    const registrationKey = process.env.CYBERRP_REGISTRATION_KEY!;
     const databaseUrl = process.env.DATABASE_URL;
     let registry: ServerRegistry = new InMemoryServerRegistry();
     let storageMode: "memory" | "postgres" = "memory";
@@ -166,7 +166,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       const { Pool } = await import("pg");
       pool = new Pool({ connectionString: databaseUrl, max: 10, idleTimeoutMillis: 30_000 });
       await pool.query("SELECT 1");
-      const { PostgresServerRegistry } = await import("./postgres-server-registry");
+      const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
       registry = new PostgresServerRegistry(pool);
       storageMode = "postgres";
     }
