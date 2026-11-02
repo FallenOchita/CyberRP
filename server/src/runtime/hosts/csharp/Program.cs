@@ -17,7 +17,7 @@ internal sealed class ResourceHost
     public async Task RunAsync()
     {
         string? line;
-        while ((line = await Console.ReadLineAsync()) is not null)
+        while ((line = await Console.In.ReadLineAsync()) is not null)
         {
             try
             {
