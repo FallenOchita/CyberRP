@@ -83,7 +83,6 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       const requestId = randomUUID();
       const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
       let settled = false;
-      let outputBytes = 0;
       let stderrBytes = 0;
 
       const cleanupStartup = () => clearTimeout(startupTimer);
@@ -102,8 +101,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       );
 
       reader.on("line", (line) => {
-        outputBytes += Buffer.byteLength(line, "utf8");
-        if (outputBytes > this.maxMessageBytes) {
+        if (Buffer.byteLength(line, "utf8") > this.maxMessageBytes) {
           fail(new Error("JavaScript resource exceeded its startup output limit."));
           return;
         }
