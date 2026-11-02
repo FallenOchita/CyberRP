@@ -1,6 +1,6 @@
 # CyberRP Resource Development
 
-CyberRP resources target one of three languages: C#, JavaScript, or Lua. All use a shared `cyberrp.resource.json` manifest.
+CyberRP resources target C#, JavaScript, and Lua. All use a shared `cyberrp.resource.json` manifest.
 
 ## Resource layout
 
@@ -9,59 +9,31 @@ resources/
   my-resource/
     cyberrp.resource.json
     server/
-      index.js
-```
-
-Example JavaScript manifest:
-
-```json
-{
-  "schemaVersion": 1,
-  "name": "my-resource",
-  "version": "1.0.0",
-  "language": "javascript",
-  "entrypoints": { "server": "server/index.js" },
-  "permissions": []
-}
+      init.lua
 ```
 
 ## Language roles
 
-- **C#**: .NET SDK contracts for strongly typed server resources.
-- **JavaScript**: JavaScript entrypoints with TypeScript declaration files.
-- **Lua**: Lua 5.4 resource API contract, intended for lightweight event-driven resources.
+- **C#**: .NET 8 SDK contracts and an experimental out-of-process worker.
+- **JavaScript**: Node.js server worker with a versioned JSON protocol.
+- **Lua**: Lua 5.4 server worker using lua-cjson for protocol messages.
 
 ## Host protocol
 
-Runtime hosts communicate with the server supervisor over newline-delimited JSON. Every message includes protocol version 1. Hosts may report logs, subscribe to events, emit events, and respond to lifecycle requests. The host supervisor owns resource lifecycle and validates protocol messages.
+Runtime hosts communicate with the server supervisor over newline-delimited JSON. Every message includes protocol version 1. Hosts may report logs, subscribe to events, emit events, and respond to lifecycle requests.
 
-## Security and current status
+## Experimental runtime status
 
-Resource code is untrusted. The launcher and directory API must never execute community scripts in-process. Production hosts must run as separate OS processes with restricted filesystem access, no network access by default, resource-specific working directories, output limits, timeouts, and explicit permission grants. A separate process alone is not a complete security sandbox; production deployment should add OS-level isolation.
+The JavaScript, C#, and Lua adapters are opt-in and support server/shared entrypoints only. The resource manager starts discovered resources in dependency order, rolls back partial startup, prevents stopping dependencies that still have dependents, and routes resource-emitted events to other running workers. It is an experimental process supervisor, not a production security boundary. It is not connected to an in-game multiplayer API or automatic resource distribution. Cyberpunk 2077 does not provide an official multiplayer server API, so these runtime workers alone do not create multiplayer functionality.
 
-The repository currently provides shared contracts, manifest validation, discovery, SDK starting points, a versioned host protocol, an event bus, and a runtime lifecycle manager. Language-specific executable hosts and game integration are still under development. The API contracts do not imply that Cyberpunk 2077 exposes multiplayer scripting hooks.
+## Security
 
+These workers execute code in separate OS processes, but process separation is not a complete sandbox. In particular, the Lua worker does not restrict Lua's standard libraries or native modules, and the C# worker does not isolate assemblies from OS resources. Do not enable any worker for untrusted community resources.
 
-## Experimental JavaScript server worker
+Before community script execution is enabled, CyberRP needs OS/container isolation, network denial by default, filesystem allowlists, CPU/memory/process quotas, permission mediation, signed resource packages, and a reviewed trust workflow. Runtime execution remains disabled by default.
 
-The repository now includes an opt-in Node.js worker host at `server/src/runtime/hosts/node-host.mjs` and a `NodeRuntimeAdapter`. The adapter accepts an absolute host-script path and must be registered with `ResourceRuntimeManager` by the server application.
+## Resource lifecycle and events
 
-Execution is **disabled by default**. Set `enabled: true` only when testing code from a trusted source. The worker runs in a separate Node process with Node's permission model enabled and read access limited to the resource directory and host directory. It does not receive the parent process environment wholesale, and child-process and filesystem-write permissions are not granted.
+`ResourceRuntimeManager.startAll()` accepts the catalog output and starts resources in topological dependency order. Missing dependencies and dependency cycles stop startup before execution. If a worker fails to start, resources started by that invocation are stopped in reverse order. `stop()` refuses to stop a resource while another running resource depends on it; `stopAll()` shuts workers down in reverse startup order.
 
-This is a development boundary, **not a complete security sandbox**. Node's permission model does not block all network access, and it is not a substitute for OS/container isolation. Do not execute untrusted community resources with this adapter. A production deployment must add OS-level network isolation, CPU/memory/process limits, explicit permission mediation, and a reviewed resource trust/signature workflow before enabling community scripts.
-
-The worker currently supports server/shared JavaScript entrypoints and the `cyberrp` API:
-- `cyberrp.log(message)`, `warn(message)`, and `error(message)`
-- `cyberrp.emit(eventName, payload)`
-- `cyberrp.on(eventName, callback)`
-
-Client-side JavaScript execution, automatic event-bus routing, dependency installation, and resource distribution are not implemented yet.
-
-
-## Experimental C# server worker
-
-The C# host lives at `server/src/runtime/hosts/csharp` and loads compiled .NET 8 resource assemblies implementing `CyberRP.SDK.ICyberRPResource`. A resource must provide a public parameterless implementation and its `entrypoints.server` (or `shared`) manifest value must point to the compiled DLL inside its resource folder.
-
-The TypeScript `CSharpRuntimeAdapter` launches the host as a separate `dotnet` process. It is disabled unless explicitly configured with `enabled: true`, and it currently supports server resources only. The C# SDK exposes lifecycle methods, logging, event subscriptions, and event emission.
-
-A separate process is not a complete sandbox. This experimental host must only be used with trusted resource assemblies. It currently has no OS-level network isolation, CPU/memory quota enforcement, or permission mediation. Do not enable it for untrusted community uploads. Production deployment requires those controls and a reviewed signing/trust workflow.
+Resources can publish JSON events with the host SDK. The manager forwards each emitted event to every other running resource; each worker delivers it to its local `CyberRP.On` / `cyberrp.on` handlers. Event names are limited to 128 characters. This is a broadcast model, not an authorization or per-resource event ACL system.

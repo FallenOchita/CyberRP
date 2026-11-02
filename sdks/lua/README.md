@@ -1,11 +1,20 @@
 # CyberRP Lua SDK
 
-Lua resources use the same `cyberrp.resource.json` manifest as C# and JavaScript resources.
+CyberRP Lua resources use Lua 5.4 and the shared `cyberrp.resource.json` manifest.
 
-The planned Lua host will provide a restricted `CyberRP` table with:
-- `CyberRP.Log.info(message)`
-- `CyberRP.Log.warn(message)`
-- `CyberRP.On(eventName, callback)`
-- `CyberRP.Emit(eventName, payload)`
+## Example
 
-These functions are an API contract, not an available in-game API yet. Lua execution will be hosted in a separate process with explicit resource permissions; community scripts must not be loaded into the launcher process.
+```lua
+CyberRP.Log.info("Resource started")
+
+CyberRP.On("player:joined", function(payload)
+  CyberRP.Log.info("A player joined")
+  CyberRP.Emit("chat:system", { text = "Welcome!" })
+end)
+```
+
+The experimental worker exposes `CyberRP.Log.info/warn/error`, `CyberRP.On(eventName, callback)`, and `CyberRP.Emit(eventName, payload)`.
+
+The worker requires Lua 5.4 and the `lua-cjson` module. It is disabled by default and supports server/shared entrypoints only.
+
+**Security:** A separate process is not a complete sandbox. The current host does not restrict filesystem, network, CPU, memory, or native-module access. Enable it only for trusted scripts; do not run untrusted community resources.
