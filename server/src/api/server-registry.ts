@@ -22,13 +22,13 @@ type StoredServer = PublicServer & { credentialHash: string };
 
 const HEARTBEAT_TIMEOUT_MS = 90_000;
 
-function hashCredential(value: string): Buffer {
+export function hashCredential(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
 }
 
 export function credentialsMatch(provided: string, expected: string): boolean {
   const a = hashCredential(provided);
-  const b = hashCredential(expected);
+  const b = Buffer.from(expected, "base64url");
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
@@ -45,7 +45,7 @@ export class InMemoryServerRegistry {
       status: "online",
       createdAt: now,
       lastHeartbeatAt: now,
-      credentialHash: credential
+      credentialHash: hashCredential(credential).toString("base64url")
     };
     this.servers.set(server.id, server);
     return { server: this.toPublic(server), credential };
