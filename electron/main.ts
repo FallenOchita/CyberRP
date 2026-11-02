@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { join } from "node:path";
+import { detectGameInstallations, validateGameFolder } from "./game-detector";
 
 const isDevelopment = !app.isPackaged;
 
@@ -32,6 +33,15 @@ function createWindow(): void {
 }
 
 ipcMain.handle("cyberrp:get-version", () => app.getVersion());
+ipcMain.handle("cyberrp:detect-game", () => detectGameInstallations());
+ipcMain.handle("cyberrp:select-game", async () => {
+  const selection = await dialog.showOpenDialog({
+    title: "Select your Cyberpunk 2077 installation folder",
+    properties: ["openDirectory"]
+  });
+  if (selection.canceled || selection.filePaths.length === 0) return null;
+  return validateGameFolder(selection.filePaths[0]);
+});
 
 app.whenReady().then(() => {
   createWindow();
