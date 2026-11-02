@@ -13,7 +13,8 @@
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "package:win": "npm run build && electron-builder --win nsis",
     "api:build": "tsc -p tsconfig.server.build.json",
-    "api:start": "npm run api:build && node -e \"process.env.CYBERRP_API_AUTOSTART='1'; require('./dist-server/server/src/api/directory-api.js')\""
+    "api:start": "npm run api:build && node -e \"process.env.CYBERRP_API_AUTOSTART='1'; require('./dist-server/server/src/api/directory-api.js')\"",
+    "test:postgres": "node --test server/tests/*.test.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
