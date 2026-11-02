@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistry, type ServerRegistration } from "./server-registry";
 import type { OwnerAuthService } from "../auth/owner-auth.js";
+import type { ServerAccessService, ServerRole } from "../auth/server-access.js";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -72,6 +73,7 @@ export type DirectoryApiOptions = {
   registry?: ServerRegistry;
   storageMode?: "memory" | "postgres";
   ownerAuth?: OwnerAuthService;
+  serverAccess?: ServerAccessService;
 };
 
 export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
@@ -142,6 +144,54 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       await options.ownerAuth.logout(token);
       send(response, 200, { loggedOut: true });
       return;
+    }
+
+    const memberRoute = /^\/v1\/servers\/([0-9a-f-]{36})\/members(?:\/([0-9a-f-]{36}))?$/.exec(url.pathname);
+    const claimRoute = /^\/v1\/servers\/([0-9a-f-]{36})\/claim$/.exec(url.pathname);
+    if ((memberRoute || claimRoute) && options.ownerAuth && options.serverAccess) {
+      const token = bearer(request);
+      const owner = token ? await options.ownerAuth.authenticate(token) : null;
+      if (!owner) {
+        send(response, 401, { error: "unauthorized" });
+        return;
+      }
+
+      if (claimRoute && request.method === "POST") {
+        const claimed = await options.serverAccess.claim(claimRoute[1], owner.id);
+        send(response, claimed ? 201 : 409, claimed ? { claimed: true, role: "owner" } : { error: "server_unavailable_or_already_claimed" });
+        return;
+      }
+
+      if (memberRoute && request.method === "GET" && !memberRoute[2]) {
+        const role = await options.serverAccess.role(memberRoute[1], owner.id);
+        if (!role) {
+          send(response, 403, { error: "forbidden" });
+          return;
+        }
+        send(response, 200, { members: await options.serverAccess.listMembers(memberRoute[1]) });
+        return;
+      }
+
+      if (memberRoute && request.method === "POST" && !memberRoute[2]) {
+        try {
+          const body = object(await readJson(request));
+          if (typeof body.ownerId !== "string" || !/^[0-9a-f-]{36}$/.test(body.ownerId) ||
+              (body.role !== "admin" && body.role !== "moderator")) throw new Error("INVALID_BODY");
+          const granted = await options.serverAccess.grant(
+            memberRoute[1], owner.id, body.ownerId, body.role as Exclude<ServerRole, "owner">
+          );
+          send(response, granted ? 200 : 403, granted ? { granted: true } : { error: "forbidden_or_invalid_member" });
+        } catch {
+          send(response, 400, { error: "invalid_request" });
+        }
+        return;
+      }
+
+      if (memberRoute && request.method === "DELETE" && memberRoute[2]) {
+        const removed = await options.serverAccess.remove(memberRoute[1], owner.id, memberRoute[2]);
+        send(response, removed ? 200 : 403, removed ? { removed: true } : { error: "forbidden" });
+        return;
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/v1/servers") {
@@ -219,7 +269,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
     let registry: ServerRegistry = new InMemoryServerRegistry();
     let storageMode: "memory" | "postgres" = "memory";
     let pool: import("pg").Pool | undefined;
-    let ownerAuth: OwnerAuthService | undefined;
+    let ownerAuth: OwnerAuthService | undefined;\n    let serverAccess: ServerAccessService | undefined;
 
     if (databaseUrl) {
       const { Pool } = await import("pg");
@@ -231,11 +281,11 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
       registry = new PostgresServerRegistry(pool);
       const { OwnerAuthService } = await import("../auth/owner-auth.js");
-      ownerAuth = new OwnerAuthService(pool);
+      ownerAuth = new OwnerAuthService(pool);\n      const { ServerAccessService } = await import("../auth/server-access.js");\n      serverAccess = new ServerAccessService(pool);
       storageMode = "postgres";
     }
 
-    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth });
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth, serverAccess });
     server.on("close", () => { void pool?.end(); });
     server.listen(port, "0.0.0.0", () => {
       process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);
