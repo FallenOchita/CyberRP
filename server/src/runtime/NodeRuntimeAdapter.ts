@@ -141,7 +141,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
         entrypoint,
         permissions: []
       };
-      child.stdin.write(`${JSON.stringify(startRequest)}\\n`);
+      child.stdin.write(`${JSON.stringify(startRequest)}\n`);
     });
   }
 
@@ -155,7 +155,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       sendEvent: (eventName: string, payload: JsonValue) => {
         if (child.killed || child.exitCode !== null) throw new Error(`Resource is not running: ${resourceName}`);
         const request: HostRequest = { protocol: 1, id: randomUUID(), type: "event", eventName, payload };
-        child.stdin.write(`${JSON.stringify(request)}\\n`);
+        child.stdin.write(`${JSON.stringify(request)}\n`);
       },
       stop: () => {
         if (stopPromise) return stopPromise;
@@ -170,7 +170,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
             resolveStop();
           });
           const request: HostRequest = { protocol: 1, id: randomUUID(), type: "stop" };
-          child.stdin.write(`${JSON.stringify(request)}\\n`);
+          child.stdin.write(`${JSON.stringify(request)}\n`);
         });
         return stopPromise;
       }
