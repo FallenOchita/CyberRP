@@ -56,8 +56,8 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
     const hostScriptPath = await realpath(this.options.hostScriptPath);
     const child = spawn(this.nodeExecutable, [
       "--permission",
-      \`--allow-fs-read=\${resourceRoot}\`,
-      \`--allow-fs-read=\${dirname(hostScriptPath)}\`,
+      `--allow-fs-read=${resourceRoot}`,
+      `--allow-fs-read=${dirname(hostScriptPath)}`,
       hostScriptPath
     ], {
       cwd: resourceRoot,
@@ -96,7 +96,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       };
 
       const startupTimer = setTimeout(
-        () => fail(new Error(\`JavaScript resource did not start within \${this.startupTimeoutMs}ms.\`)),
+        () => fail(new Error(`JavaScript resource did not start within ${this.startupTimeoutMs}ms.`)),
         this.startupTimeoutMs
       );
 
@@ -116,7 +116,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
 
         this.options.onMessage?.(resourceName, message);
         if (message.type === "fatal") {
-          fail(new Error(\`JavaScript resource failed to start: \${message.error}\`));
+          fail(new Error(`JavaScript resource failed to start: ${message.error}`));
         } else if (message.type === "ready" && message.id === requestId && !settled) {
           settled = true;
           cleanupStartup();
@@ -130,7 +130,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       });
       child.once("error", (error) => fail(error));
       child.once("exit", (code, signal) => {
-        if (!settled) fail(new Error(\`JavaScript resource exited before ready (code \${code}, signal \${signal}).\`));
+        if (!settled) fail(new Error(`JavaScript resource exited before ready (code ${code}, signal ${signal}).`));
       });
 
       const startRequest: HostRequest = {
@@ -141,7 +141,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
         entrypoint,
         permissions: []
       };
-      child.stdin.write(\`\${JSON.stringify(startRequest)}\\n\`);
+      child.stdin.write(`${JSON.stringify(startRequest)}\\n`);
     });
   }
 
@@ -153,16 +153,16 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
     let stopPromise: Promise<void> | undefined;
     return {
       sendEvent: (eventName: string, payload: JsonValue) => {
-        if (child.killed || child.exitCode !== null) throw new Error(\`Resource is not running: \${resourceName}\`);
+        if (child.killed || child.exitCode !== null) throw new Error(`Resource is not running: ${resourceName}`);
         const request: HostRequest = { protocol: 1, id: randomUUID(), type: "event", eventName, payload };
-        child.stdin.write(\`\${JSON.stringify(request)}\\n\`);
+        child.stdin.write(`${JSON.stringify(request)}\\n`);
       },
       stop: () => {
         if (stopPromise) return stopPromise;
         stopPromise = new Promise<void>((resolveStop, rejectStop) => {
           const timer = setTimeout(() => {
             child.kill();
-            rejectStop(new Error(\`Timed out stopping JavaScript resource: \${resourceName}\`));
+            rejectStop(new Error(`Timed out stopping JavaScript resource: ${resourceName}`));
           }, this.shutdownTimeoutMs);
           child.once("exit", () => {
             clearTimeout(timer);
@@ -170,7 +170,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
             resolveStop();
           });
           const request: HostRequest = { protocol: 1, id: randomUUID(), type: "stop" };
-          child.stdin.write(\`\${JSON.stringify(request)}\\n\`);
+          child.stdin.write(`${JSON.stringify(request)}\\n`);
         });
         return stopPromise;
       }
