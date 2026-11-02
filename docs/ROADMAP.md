@@ -16,7 +16,20 @@
 - [ ] Persist local settings and favorites
 - [ ] Replace demo servers with a typed directory API
 
-## Milestone 2 — Community services
+## Milestone 2 — Multi-language resource foundation
+- [x] Define a versioned resource manifest shared by C#, JavaScript, and Lua
+- [x] Add JSON Schema and TypeScript manifest validation
+- [x] Add initial C# SDK interfaces
+- [x] Add JavaScript SDK type contracts
+- [x] Document the Lua SDK contract
+- [x] Add resource catalog discovery and a sample JavaScript resource
+- [ ] Add isolated .NET worker host and lifecycle management
+- [ ] Add isolated Node.js worker host and lifecycle management
+- [ ] Add isolated Lua worker host and lifecycle management
+- [ ] Add versioned host/resource RPC protocol and permission enforcement
+- [ ] Add integration tests for all three runtimes
+
+## Milestone 3 — Community services
 - [ ] Server detail pages and rule acknowledgement
 - [ ] Account registration and secure session handling
 - [ ] Character profiles and community identity
