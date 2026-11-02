@@ -101,3 +101,16 @@ Requires the server credential.
 - Without `DATABASE_URL`, the API uses in-memory server storage and owner authentication is unavailable.
 - Online status reflects a valid heartbeat, not a successful player connection.
 - The directory stores metadata only; it does not provide Cyberpunk 2077 multiplayer synchronization or a native game server API.
+
+
+## Server ownership and staff roles
+
+Migration 003 adds a nullable primary owner to each directory server and a server membership table. A signed-in owner can claim an unclaimed server:
+
+`POST /v1/servers/:id/claim`
+
+Requires the owner session bearer token. The claim is atomic; only the first successful claim wins. The response is `201` on success and `409` if the server is missing or already claimed.
+
+Members can be viewed with `GET /v1/servers/:id/members`. Only existing members can view the list. An owner can grant the `admin` or `moderator` role using `POST /v1/servers/:id/members` with `{ "ownerId": "<account-uuid>", "role": "admin" }`. Owners and admins can grant moderators; only the owner can grant admins. A member can be removed with `DELETE /v1/servers/:id/members/:ownerId`; members cannot remove themselves or the primary owner, and cannot remove peers or higher roles.
+
+Role assignment targets existing owner accounts. This API currently has first-owner-only account bootstrap, so adding further accounts requires the future invitation/account provisioning milestone. Unclaimed servers remain visible in the public directory and continue to use their server-host credential for heartbeat operations. The owner role controls dashboard membership; it does not replace the server-host credential.
