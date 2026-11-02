@@ -11,7 +11,9 @@
     "typecheck:server": "tsc -p tsconfig.server.json --pretty false",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
-    "package:win": "npm run build && electron-builder --win nsis"
+    "package:win": "npm run build && electron-builder --win nsis",
+    "api:build": "tsc -p tsconfig.server.build.json",
+    "api:start": "npm run api:build && node -e \"process.env.CYBERRP_API_AUTOSTART='1'; require('./dist-server/server/src/api/directory-api.js')\""
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -33,9 +35,22 @@
   "build": {
     "appId": "com.cyberrp.launcher",
     "productName": "CyberRP",
-    "directories": { "output": "release" },
-    "files": ["dist/**/*", "dist-electron/**/*", "package.json"],
-    "win": { "target": ["nsis"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

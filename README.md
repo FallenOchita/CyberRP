@@ -25,7 +25,7 @@ CyberRP is designed for three resource languages, following a FiveM-style author
 
 Every resource uses a shared `cyberrp.resource.json` manifest with a language, semantic version, entrypoints, dependencies, and requested permissions. The manifest contract, schema, initial SDK interfaces, and a sample JavaScript resource are in this repository.
 
-**Runtime status:** These are the initial authoring contracts and discovery foundations. The C#, JavaScript, and Lua execution hosts and real game-side APIs are not implemented yet. Community resource code must run in isolated processes with explicit permissions; it must never be evaluated inside the launcher or directory API process.
+**Runtime status:** The repository includes experimental JavaScript, C#, and Lua worker processes, a dependency-aware resource lifecycle manager, and cross-runtime JSON event routing. Workers are opt-in and are not complete security sandboxes. Community resource code must never be evaluated inside the launcher or directory API process. See [resource development](docs/RESOURCE_DEVELOPMENT.md).
 
 ## Technology
 
@@ -45,7 +45,7 @@ npm run typecheck
 npm run build
 ```
 
-## Security model
+## Directory API (development foundation)\n\nThe API can be built with `npm run api:build` and started with `CYBERRP_REGISTRATION_KEY=<long-random-secret> npm run api:start`. It listens on port `8787` by default; set `PORT` to override it. The registration key must contain at least 24 characters. The current server registry is in-memory and resets when the process restarts. Do not expose this development service as a production directory. See [docs/DIRECTORY_API.md](docs/DIRECTORY_API.md) for endpoints and limitations.\n\n## Security model
 
 The renderer has no Node.js integration. It communicates with the main process through a narrow, typed preload API. Do not put secrets, authentication tokens, or privileged filesystem/network operations in renderer code. Production updates must be code-signed and verified before installation.
 
