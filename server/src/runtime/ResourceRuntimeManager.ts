@@ -66,11 +66,30 @@ export class ResourceRuntimeManager {
     if (!(await adapter.isAvailable())) {
       throw new Error(`The ${manifest.language} runtime is not installed or is disabled.`);
     }
-    const handle = await adapter.start(manifest, context);
-    this.running.set(manifest.name, { manifest, context, handle });
+    const pendingEvents: Array<{ eventName: string; payload: JsonValue }> = [];
+    const runtimeContext: RuntimeContext = {
+      ...context,
+      emitEvent: (eventName, payload) => {
+        if (this.running.has(manifest.name)) this.emit(manifest.name, eventName, payload);
+        else pendingEvents.push({ eventName, payload });
+      }
+    };
+    const handle = await adapter.start(manifest, runtimeContext);
+    this.running.set(manifest.name, { manifest, context: runtimeContext, handle });
+    try {
+      for (const event of pendingEvents) this.emit(manifest.name, event.eventName, event.payload);
+    } catch (error) {
+      this.running.delete(manifest.name);
+      try {
+        await handle.stop();
+      } catch (stopError) {
+        throw new AggregateError([error, stopError], `Resource ${manifest.name} failed while flushing startup events and could not be stopped cleanly.`);
+      }
+      throw error;
+    }
   }
 
-  async emit(sourceResource: string, eventName: string, payload: JsonValue): Promise<number> {
+  emit(sourceResource: string, eventName: string, payload: JsonValue): number {
     if (!eventName.trim() || eventName.length > 128) throw new Error("Invalid event name.");
     if (!this.running.has(sourceResource)) throw new Error(`Event source is not running: ${sourceResource}`);
 
