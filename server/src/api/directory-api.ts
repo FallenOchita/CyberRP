@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { InMemoryServerRegistry, type ServerRegistration } from "./server-registry";
+import { InMemoryServerRegistry, credentialsMatch, type ServerRegistration } from "./server-registry";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -93,7 +93,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
     }
 
     if (request.method === "POST" && url.pathname === "/v1/servers") {
-      if (bearer(request) !== options.registrationKey) {
+      if (!credentialsMatch(bearer(request) ?? "", options.registrationKey)) {
         send(response, 401, { error: "unauthorized" });
         return;
       }
