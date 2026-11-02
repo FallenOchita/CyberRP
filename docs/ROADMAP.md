@@ -24,11 +24,11 @@
 - [x] Document the Lua SDK contract
 - [x] Add resource catalog discovery and a sample JavaScript resource
 - [ ] Add isolated .NET worker host and lifecycle management
-- [ ] Add isolated Node.js worker host and lifecycle management
+- [x] Add opt-in Node.js worker host and process lifecycle adapter (trusted resources only)
 - [ ] Add isolated Lua 5.4 worker host and lifecycle management
 - [x] Define versioned newline-delimited JSON host protocol
 - [x] Add shared resource lifecycle manager and event bus foundation
-- [ ] Add protocol authentication, permission enforcement, and resource quotas
+- [ ] Add protocol authentication, permission enforcement, OS-level network isolation, and resource quotas
 - [ ] Add integration tests for all three runtimes
 
 ## Milestone 3 — Community services
