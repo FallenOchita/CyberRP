@@ -8,6 +8,17 @@
 - **Game launch:** Steam installs are handed to Steam using Cyberpunk 2077's app ID; other supported installs prefer CD PROJEKT RED's REDprelauncher when available, then use the validated game executable.
 - **Directory data:** Currently static demo fixtures in the renderer. A future API client will replace these fixtures.
 
+## Resource runtime architecture
+
+- **Shared resource contract:** `cyberrp.resource.json` describes language, version, server/client/shared entrypoints, dependencies, and requested permissions.
+- **Resource catalog:** discovers resource folders and validates manifests before they can be considered for loading.
+- **C# adapter:** planned isolated .NET worker using the CyberRP.SDK contracts.
+- **JavaScript adapter:** planned isolated Node.js worker using the typed CyberRP JavaScript API.
+- **Lua adapter:** planned isolated Lua 5.4 worker using the documented CyberRP Lua API.
+- **Host boundary:** each runtime will communicate with the server host through a versioned, permission-checked message protocol. Resource scripts will not run in the launcher or API process.
+
+The current repository contains the manifest contract, schema, catalog discovery function, SDK starting points, and a JavaScript sample. Runtime workers, resource lifecycle management, RPC transport, and actual game APIs remain future implementation work.
+
 ## Planned services
 
 1. Public directory API: server listings, health/status, tags, and community metadata.
