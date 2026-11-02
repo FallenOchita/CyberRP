@@ -52,3 +52,8 @@ The renderer has no Node.js integration. It communicates with the main process t
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
+## PostgreSQL directory persistence
+
+The directory API supports a PostgreSQL-backed server registry. Configure `DATABASE_URL` and apply `server/migrations/001_create_cyberrp_servers.sql`; otherwise the API uses in-memory development storage. See [PostgreSQL setup](docs/POSTGRESQL.md).
