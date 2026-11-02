@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 export type ServerRegistration = {
   name: string;
@@ -23,7 +23,7 @@ type StoredServer = PublicServer & { credentialHash: string };
 const HEARTBEAT_TIMEOUT_MS = 90_000;
 
 function hashCredential(value: string): Buffer {
-  return Buffer.from(value, "utf8");
+  return createHash("sha256").update(value, "utf8").digest();
 }
 
 export function credentialsMatch(provided: string, expected: string): boolean {
@@ -67,7 +67,7 @@ export class InMemoryServerRegistry {
 
   heartbeat(id: string, credential: string, playerCount: number): PublicServer | null {
     const server = this.servers.get(id);
-    if (!server || !credentialsMatch(credential, server.credentialHash)) return null;
+    if (!server || !credentialsMatch(credential, server.credentialHash) || playerCount > server.maxPlayers) return null;
     server.playerCount = playerCount;
     server.lastHeartbeatAt = new Date().toISOString();
     server.status = "online";
