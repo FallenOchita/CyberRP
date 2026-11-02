@@ -1,6 +1,6 @@
 # Directory API
 
-The directory API provides public server discovery, server-host credentials, and an initial invite-only owner account flow. It is still a development foundation and must be deployed behind HTTPS with rate limiting before public use.
+The directory API provides public server discovery, server-host credentials, owner authentication, server ownership, and staff invitations. It is still a development foundation and must be deployed behind HTTPS with rate limiting before public use.
 
 ## Run locally
 
@@ -95,7 +95,7 @@ Requires the server credential.
 
 ## Security status and remaining work
 
-- Owner authentication currently supports a single initial owner account; staff roles, invitations, password reset, and owner-managed server assignment are not implemented yet.
+- Staff invitations create accounts for an existing server and assign the invited role during one-time redemption. Password reset and account recovery are not implemented.
 - Login rate limiting, MFA, email verification, audit logging, and account recovery are not implemented yet.
 - Use HTTPS, a reverse proxy, rate limiting, and secret management before exposing the API publicly.
 - Without `DATABASE_URL`, the API uses in-memory server storage and owner authentication is unavailable.
@@ -113,4 +113,32 @@ Requires the owner session bearer token. The claim is atomic; only the first suc
 
 Members can be viewed with `GET /v1/servers/:id/members`. Only existing members can view the list. An owner can grant the `admin` or `moderator` role using `POST /v1/servers/:id/members` with `{ "ownerId": "<account-uuid>", "role": "admin" }`. Owners and admins can grant moderators; only the owner can grant admins. A member can be removed with `DELETE /v1/servers/:id/members/:ownerId`; members cannot remove themselves or the primary owner, and cannot remove peers or higher roles.
 
-Role assignment targets existing owner accounts. This API currently has first-owner-only account bootstrap, so adding further accounts requires the future invitation/account provisioning milestone. Unclaimed servers remain visible in the public directory and continue to use their server-host credential for heartbeat operations. The owner role controls dashboard membership; it does not replace the server-host credential.
+## Staff invitations
+
+An owner can invite an administrator or moderator. An admin can invite moderators only. Invitations are bound to one email address and one server, expire after seven days, and can be redeemed once.
+
+Create an invitation:
+
+`POST /v1/servers/:id/invitations`
+
+Requires an owner session bearer token. JSON body:
+
+```json
+{ "email": "staff@example.com", "role": "moderator" }
+```
+
+The response contains the invitation metadata and a one-time raw `token`. The API does not send email; the server owner must deliver the invitation link/token through a trusted channel. Store the raw token securely and do not log it.
+
+Redeem an invitation:
+
+`POST /v1/invitations/accept`
+
+JSON body:
+
+```json
+{ "token": "<invitation-token>", "password": "a-unique-password-of-at-least-12-characters" }
+```
+
+Successful redemption atomically creates the account, adds the invited role to that server, marks the invitation as redeemed, and returns a 12-hour owner session. A token cannot be reused or redeemed after expiry. The database stores only a hash of each invitation token. If the email already has an account, the API returns a conflict; account-linking and multi-server account invitations are not yet supported.
+
+Unclaimed servers remain visible in the public directory and continue to use their server-host credential for heartbeat operations. The owner role controls dashboard membership; it does not replace the server-host credential.
