@@ -69,6 +69,7 @@ function registration(value: unknown): ServerRegistration {
 export type DirectoryApiOptions = {
   registrationKey: string;
   registry?: ServerRegistry;
+  storageMode?: "memory" | "postgres";
 };
 
 export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
@@ -81,14 +82,14 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
-      send(response, 200, { status: "ok", storage: "memory" });
+      send(response, 200, { status: "ok", storage: options.storageMode ?? "memory" });
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/v1/servers") {
       send(response, 200, {
         servers: await registry.list({ search: url.searchParams.get("search") ?? undefined, tag: url.searchParams.get("tag") ?? undefined }),
-        storage: "memory"
+        storage: options.storageMode ?? "memory"
       });
       return;
     }
@@ -153,8 +154,30 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
 if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART === "1") {
   const port = Number(process.env.PORT ?? 8787);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be a valid TCP port.");
-  const { server } = createDirectoryApi({ registrationKey: process.env.CYBERRP_REGISTRATION_KEY });
-  server.listen(port, "0.0.0.0", () => {
-    process.stdout.write(`CyberRP directory API listening on port ${port} (in-memory registry).\n`);
+
+  void (async () => {
+    const registrationKey = process.env.CYBERRP_REGISTRATION_KEY;
+    const databaseUrl = process.env.DATABASE_URL;
+    let registry: ServerRegistry = new InMemoryServerRegistry();
+    let storageMode: "memory" | "postgres" = "memory";
+    let pool: import("pg").Pool | undefined;
+
+    if (databaseUrl) {
+      const { Pool } = await import("pg");
+      pool = new Pool({ connectionString: databaseUrl, max: 10, idleTimeoutMillis: 30_000 });
+      await pool.query("SELECT 1");
+      const { PostgresServerRegistry } = await import("./postgres-server-registry");
+      registry = new PostgresServerRegistry(pool);
+      storageMode = "postgres";
+    }
+
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode });
+    server.on("close", () => { void pool?.end(); });
+    server.listen(port, "0.0.0.0", () => {
+      process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);
+    });
+  })().catch((error: unknown) => {
+    process.stderr.write(`CyberRP directory API startup failed: ${error instanceof Error ? error.message : "unknown error"}\\n`);
+    process.exitCode = 1;
   });
 }
