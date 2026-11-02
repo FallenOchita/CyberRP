@@ -166,6 +166,9 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       const { Pool } = await import("pg");
       pool = new Pool({ connectionString: databaseUrl, max: 10, idleTimeoutMillis: 30_000 });
       await pool.query("SELECT 1");
+      const { runMigrations } = await import("../db/migrate.js");
+      const applied = await runMigrations(pool);
+      if (applied.length > 0) process.stdout.write("Applied database migrations: " + applied.join(", ") + "\\n");
       const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
       registry = new PostgresServerRegistry(pool);
       storageMode = "postgres";
