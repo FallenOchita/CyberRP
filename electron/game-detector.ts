@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { delimiter, join, normalize } from "node:path";
+import { join, normalize } from "node:path";
 
 export type GameInstall = {
   path: string;
