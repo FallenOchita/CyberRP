@@ -4,6 +4,7 @@ export type RuntimeContext = {
   resourceRoot: string;
   resourceName: string;
   environment: "server" | "client";
+  emitEvent?: (eventName: string, payload: import("./protocol").JsonValue) => void;
 };
 
 export type RuntimeHandle = {
