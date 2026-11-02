@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "typecheck:server": "tsc -p tsconfig.server.json --pretty false",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "package:win": "npm run build && electron-builder --win nsis"
