@@ -29,7 +29,7 @@ const demoServers: Server[] = [
     featured: true
   },
   {
-    id: " afterlife",
+    id: "afterlife",
     name: "The Afterlife | Roleplay",
     description: "Build a name in Night City. Whitelisted stories and character-focused sessions.",
     region: "North America",
