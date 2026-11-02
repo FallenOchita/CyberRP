@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistry, type ServerRegistration } from "./server-registry";
+import type { OwnerAuthService } from "../auth/owner-auth.js";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -70,6 +71,7 @@ export type DirectoryApiOptions = {
   registrationKey: string;
   registry?: ServerRegistry;
   storageMode?: "memory" | "postgres";
+  ownerAuth?: OwnerAuthService;
 };
 
 export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
@@ -83,6 +85,62 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
     const url = new URL(request.url ?? "/", "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
       send(response, 200, { status: "ok", storage: options.storageMode ?? "memory" });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/auth/register") {
+      if (!options.ownerAuth || !credentialsMatch(bearer(request) ?? "", registrationKeyHash)) {
+        send(response, 401, { error: "unauthorized" });
+        return;
+      }
+      try {
+        const body = object(await readJson(request));
+        if (typeof body.email !== "string" || typeof body.password !== "string") throw new Error("INVALID_BODY");
+        const owner = await options.ownerAuth.registerFirstOwner(body.email, body.password);
+        send(response, 201, { owner });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "";
+        const status = reason === "OWNER_ALREADY_EXISTS" ? 409 : reason === "BODY_TOO_LARGE" ? 413 : 400;
+        send(response, status, { error: status === 409 ? "owner_already_exists" : "invalid_request" });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/auth/login") {
+      if (!options.ownerAuth) {
+        send(response, 503, { error: "authentication_unavailable" });
+        return;
+      }
+      try {
+        const body = object(await readJson(request));
+        if (typeof body.email !== "string" || typeof body.password !== "string" || body.password.length > 256) throw new Error("INVALID_BODY");
+        const session = await options.ownerAuth.login(body.email, body.password);
+        if (!session) {
+          send(response, 401, { error: "invalid_credentials" });
+          return;
+        }
+        send(response, 200, session);
+      } catch {
+        send(response, 400, { error: "invalid_request" });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/v1/auth/me") {
+      const token = bearer(request);
+      const owner = token && options.ownerAuth ? await options.ownerAuth.authenticate(token) : null;
+      send(response, owner ? 200 : 401, owner ? { owner } : { error: "unauthorized" });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/auth/logout") {
+      const token = bearer(request);
+      if (!token || !options.ownerAuth) {
+        send(response, 401, { error: "unauthorized" });
+        return;
+      }
+      await options.ownerAuth.logout(token);
+      send(response, 200, { loggedOut: true });
       return;
     }
 
@@ -161,6 +219,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
     let registry: ServerRegistry = new InMemoryServerRegistry();
     let storageMode: "memory" | "postgres" = "memory";
     let pool: import("pg").Pool | undefined;
+    let ownerAuth: OwnerAuthService | undefined;
 
     if (databaseUrl) {
       const { Pool } = await import("pg");
@@ -171,10 +230,12 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       if (applied.length > 0) process.stdout.write("Applied database migrations: " + applied.join(", ") + "\\n");
       const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
       registry = new PostgresServerRegistry(pool);
+      const { OwnerAuthService } = await import("../auth/owner-auth.js");
+      ownerAuth = new OwnerAuthService(pool);
       storageMode = "postgres";
     }
 
-    const { server } = createDirectoryApi({ registrationKey, registry, storageMode });
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth });
     server.on("close", () => { void pool?.end(); });
     server.listen(port, "0.0.0.0", () => {
       process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);

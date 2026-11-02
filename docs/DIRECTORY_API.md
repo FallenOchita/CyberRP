@@ -1,30 +1,59 @@
-# Directory API (development foundation)
+# Directory API
 
-The first directory service is a small Node.js HTTP API intended for local development and integration work. It currently stores server records in memory; every record and server credential is lost when the process exits. It is not ready for public production deployment.
+The directory API provides public server discovery, server-host credentials, and an initial invite-only owner account flow. It is still a development foundation and must be deployed behind HTTPS with rate limiting before public use.
 
 ## Run locally
 
-Requirements: Node.js 24.
+Requirements: Node.js 24 and PostgreSQL.
 
 ```bash
 npm install
 # Set a unique random secret of at least 24 characters.
 # PowerShell:
 $env:CYBERRP_REGISTRATION_KEY = "replace-with-a-long-random-secret"
+$env:DATABASE_URL = "postgres://user:password@localhost:5432/cyberrp"
 npm run api:start
 ```
 
-The API listens on `0.0.0.0:8787` by default. Set `PORT` to change the port. Keep the registration key private and do not commit it. The registration key grants permission to publish directory entries.
+The API listens on `0.0.0.0:8787` by default. Set `PORT` to change the port. Startup automatically applies numbered SQL migrations when `DATABASE_URL` is configured. Keep the registration key private; it is the bootstrap credential for server registration and the first owner account.
 
-## Endpoints
+## Owner authentication
 
-### Health
+### Create the first owner
 
-`GET /health`
+`POST /v1/auth/register`
 
-Returns service health and the storage mode.
+Requires the bootstrap registration key as a bearer token. This endpoint is available only when PostgreSQL is configured and succeeds only while the owner table is empty. It is intentionally a one-time bootstrap route.
 
-### Public server list
+```json
+{ "email": "owner@example.com", "password": "use-a-unique-password-of-at-least-12-characters" }
+```
+
+Passwords must be 12–256 characters. Passwords are stored as salted scrypt hashes. The endpoint does not return a session; sign in after creating the owner.
+
+### Sign in
+
+`POST /v1/auth/login`
+
+```json
+{ "email": "owner@example.com", "password": "your-password" }
+```
+
+Returns an opaque bearer token and a 12-hour expiry. The database stores only a SHA-256 hash of the random token. Keep the returned token secret.
+
+### Current owner
+
+`GET /v1/auth/me`
+
+Requires `Authorization: Bearer <session-token>`.
+
+### Sign out
+
+`POST /v1/auth/logout`
+
+Requires the session bearer token and revokes that session.
+
+## Public server list
 
 `GET /v1/servers`
 
@@ -32,15 +61,13 @@ Optional query parameters:
 - `search`: searches server name, description, and advertised address.
 - `tag`: exact tag match.
 
-Responses include online/offline status. A server is considered offline after 90 seconds without a heartbeat.
+A server is considered offline after 90 seconds without a heartbeat.
 
-### Register a server
+## Register a server
 
 `POST /v1/servers`
 
-Requires `Authorization: Bearer <CYBERRP_REGISTRATION_KEY>`.
-
-Example JSON:
+Requires `Authorization: Bearer <CYBERRP_REGISTRATION_KEY>`. The response returns a server ID and a one-time server credential. Store it securely on the server host; only its hash is retained.
 
 ```json
 {
@@ -54,31 +81,23 @@ Example JSON:
 }
 ```
 
-The response returns a server ID and a one-time server credential. Store that credential securely on the server host; it is not returned again. The registry stores only a hash of the credential.
-
-### Heartbeat
+## Heartbeat
 
 `POST /v1/servers/:id/heartbeat`
 
-Requires the server credential in the bearer header. JSON body:
+Requires the server credential. JSON body: `{ "playerCount": 12 }`. Send heartbeats more frequently than every 90 seconds.
 
-```json
-{ "playerCount": 12 }
-```
-
-The player count must be between zero and the registered maximum. Send heartbeats more frequently than every 90 seconds.
-
-### Remove a server
+## Remove a server
 
 `DELETE /v1/servers/:id`
 
-Requires the server credential in the bearer header.
+Requires the server credential.
 
-## Current limitations / production work
+## Security status and remaining work
 
-- Without `DATABASE_URL`, the API uses in-memory storage. Set `DATABASE_URL` and apply the PostgreSQL migration to enable persistent storage; see `docs/POSTGRESQL.md`.
-- No player account system or user login yet.
-- No TLS termination, rate limiting, abuse reporting, moderation workflow, or audit log. Deploy behind a properly configured HTTPS reverse proxy only after those controls are added.
-- No server reachability probe; online status means a valid heartbeat was received, not that players can successfully connect.
-- Registration uses one shared bootstrap key. A production owner portal and scoped server provisioning are still needed.
-- This directory is metadata only. It does not provide Cyberpunk 2077 multiplayer synchronization or a native game server API.
+- Owner authentication currently supports a single initial owner account; staff roles, invitations, password reset, and owner-managed server assignment are not implemented yet.
+- Login rate limiting, MFA, email verification, audit logging, and account recovery are not implemented yet.
+- Use HTTPS, a reverse proxy, rate limiting, and secret management before exposing the API publicly.
+- Without `DATABASE_URL`, the API uses in-memory server storage and owner authentication is unavailable.
+- Online status reflects a valid heartbeat, not a successful player connection.
+- The directory stores metadata only; it does not provide Cyberpunk 2077 multiplayer synchronization or a native game server API.
