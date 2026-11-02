@@ -72,7 +72,7 @@ export class PostgresServerRegistry implements ServerRegistry {
     const result = await this.pool.query<ServerRow>(
       `UPDATE cyberrp_servers
        SET player_count = $3, last_heartbeat_at = now()
-       WHERE id = $1 AND credential_hash = $2 AND player_count <= max_players
+       WHERE id = $1 AND credential_hash = $2 AND $3 <= max_players AND $3 >= 0
        RETURNING *`,
       [id, hashCredential(credential), playerCount]
     );
