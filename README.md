@@ -15,6 +15,18 @@ A community-focused Cyberpunk 2077 roleplay launcher and server directory, inspi
 - Account and character services (later milestone)
 - Server administration and community APIs (later milestone)
 
+## Resource scripting model
+
+CyberRP is designed for three resource languages, following a FiveM-style authoring model:
+
+- **C#** — .NET resource SDK for strongly typed server resources.
+- **JavaScript** — TypeScript-friendly resource API contracts and JavaScript entrypoints.
+- **Lua** — lightweight resource API contract for Lua scripts.
+
+Every resource uses a shared `cyberrp.resource.json` manifest with a language, semantic version, entrypoints, dependencies, and requested permissions. The manifest contract, schema, initial SDK interfaces, and a sample JavaScript resource are in this repository.
+
+**Runtime status:** These are the initial authoring contracts and discovery foundations. The C#, JavaScript, and Lua execution hosts and real game-side APIs are not implemented yet. Community resource code must run in isolated processes with explicit permissions; it must never be evaluated inside the launcher or directory API process.
+
 ## Technology
 
 - Electron + React + TypeScript + Vite
