@@ -10,7 +10,9 @@
 ## Milestone 1 — Launcher core
 - [x] Detect supported Cyberpunk 2077 installations (Steam, GOG, Epic common locations)
 - [x] Add user-selected game folder validation
-- [ ] Persist selected game path and add launch arguments
+- [x] Persist the selected game path in local launcher settings
+- [x] Add Play action with Steam routing and REDprelauncher/direct executable fallback
+- [ ] Add configurable launch arguments with validation
 - [ ] Persist local settings and favorites
 - [ ] Replace demo servers with a typed directory API
 
