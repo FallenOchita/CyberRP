@@ -56,3 +56,12 @@ The worker currently supports server/shared JavaScript entrypoints and the `cybe
 - `cyberrp.on(eventName, callback)`
 
 Client-side JavaScript execution, automatic event-bus routing, dependency installation, and resource distribution are not implemented yet.
+
+
+## Experimental C# server worker
+
+The C# host lives at `server/src/runtime/hosts/csharp` and loads compiled .NET 8 resource assemblies implementing `CyberRP.SDK.ICyberRPResource`. A resource must provide a public parameterless implementation and its `entrypoints.server` (or `shared`) manifest value must point to the compiled DLL inside its resource folder.
+
+The TypeScript `CSharpRuntimeAdapter` launches the host as a separate `dotnet` process. It is disabled unless explicitly configured with `enabled: true`, and it currently supports server resources only. The C# SDK exposes lifecycle methods, logging, event subscriptions, and event emission.
+
+A separate process is not a complete sandbox. This experimental host must only be used with trusted resource assemblies. It currently has no OS-level network isolation, CPU/memory quota enforcement, or permission mediation. Do not enable it for untrusted community uploads. Production deployment requires those controls and a reviewed signing/trust workflow.
