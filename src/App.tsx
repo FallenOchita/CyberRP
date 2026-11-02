@@ -178,7 +178,6 @@ export default function App() {
               {visibleServers.length === 0 && <div className="empty-state">No servers match this view yet.</div>}
             </div>
             <aside className="detail-panel">{selected ? <><div className="detail-art"><span>CYBERRP COMMUNITY</span><b>{selected.name}</b></div><div className="detail-body"><div className="eyebrow">SERVER OVERVIEW</div><h3>{selected.name}</h3><p>{selected.description}</p><div className="detail-stats"><div><strong>{selected.players}/{selected.capacity}</strong><small>PLAYERS</small></div><div><strong>{selected.region}</strong><small>REGION</small></div></div><div className="detail-rule"><ShieldCheck size={17}/><span>Review community rules before connecting.</span></div><button className="connect-button" disabled><Gamepad2 size={17}/> CONNECTION COMING SOON</button><small className="connect-note">Server listings are illustrative demo data. No live server connection is available yet.</small></div></> : <div className="empty-state">Select a server to see its details.</div>}</aside></div>
-            </div>
           </section>
         )}
         <footer><span>CYBERRP © {new Date().getFullYear()} — COMMUNITY BUILT</span><span>BUILD {version.toUpperCase()}</span></footer>
