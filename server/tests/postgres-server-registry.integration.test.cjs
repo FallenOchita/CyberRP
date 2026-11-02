@@ -1,9 +1,8 @@
 const assert = require("node:assert/strict");
-const { readFile } = require("node:fs/promises");
-const path = require("node:path");
 const test = require("node:test");
 const { Pool } = require("pg");
 const { PostgresServerRegistry } = require("../../dist-server/server/src/api/postgres-server-registry.js");
+const { runMigrations } = require("../../dist-server/server/src/db/migrate.js");
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -16,11 +15,9 @@ test("PostgreSQL registry persists registrations and enforces server credentials
     await pool.end();
   });
 
-  const migration = await readFile(
-    path.resolve(__dirname, "../migrations/001_create_cyberrp_servers.sql"),
-    "utf8"
-  );
-  await pool.query(migration);
+  const applied = await runMigrations(pool);
+  assert.ok(applied.includes("001_create_cyberrp_servers.sql"));
+  assert.deepEqual(await runMigrations(pool), [], "a second run must be a no-op");
 
   const registry = new PostgresServerRegistry(pool);
   const registration = {
