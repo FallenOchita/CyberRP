@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 export type ServerRole = "owner" | "admin" | "moderator";
@@ -65,14 +64,15 @@ export class ServerAccessService {
     if (!actorRole || (role === "admin" && actorRole !== "owner") || (role === "moderator" && rank[actorRole] < rank.admin)) return false;
     const target = await this.pool.query("SELECT 1 FROM cyberrp_owners WHERE id = $1", [targetId]);
     if (!target.rowCount) return false;
-    await this.pool.query(
+    const result = await this.pool.query(
       `INSERT INTO cyberrp_server_members (server_id, owner_id, role)
        VALUES ($1,$2,$3)
        ON CONFLICT (server_id, owner_id) DO UPDATE SET role = EXCLUDED.role
-       WHERE cyberrp_server_members.role <> 'owner'`,
+       WHERE cyberrp_server_members.role <> 'owner'
+       RETURNING owner_id`,
       [serverId, targetId, role]
     );
-    return true;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async remove(serverId: string, actorId: string, targetId: string): Promise<boolean> {
