@@ -16,6 +16,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build C# resource host
+        run: dotnet build server/src/runtime/hosts/csharp/CyberRP.CSharpHost.csproj --configuration Release
       - name: Install dependencies
         run: npm install
       - name: Type check
