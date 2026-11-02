@@ -166,7 +166,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       return;
     }
 
-    const invitationRoute = /^\\/v1\\/servers\\/([0-9a-f-]{36})\\/invitations$/.exec(url.pathname);
+    const invitationRoute = /^\/v1\/servers\/([0-9a-f-]{36})\/invitations$/.exec(url.pathname);
     if (invitationRoute && request.method === "POST" && options.ownerAuth && options.invitations) {
       const token = bearer(request);
       const owner = token ? await options.ownerAuth.authenticate(token) : null;
