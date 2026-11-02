@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cyberrp.dev/schemas/resource-v1.json",
+  "title": "CyberRP Resource Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "name", "version", "language", "entrypoints"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$" },
+    "description": { "type": "string", "maxLength": 500 },
+    "author": { "type": "string", "maxLength": 120 },
+    "language": { "enum": ["csharp", "javascript", "lua"] },
+    "entrypoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "server": { "$ref": "#/$defs/relativePath" },
+        "client": { "$ref": "#/$defs/relativePath" },
+        "shared": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "dependencies": { "type": "array", "items": { "type": "string", "maxLength": 96 } },
+    "permissions": { "type": "array", "items": { "type": "string", "maxLength": 96 } }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(^|/)\\.\\.?(/|$)).+$"
+    }
+  }
+}
