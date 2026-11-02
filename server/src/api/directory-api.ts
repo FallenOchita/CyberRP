@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistry, type ServerRegistration } from "./server-registry";
 import type { OwnerAuthService } from "../auth/owner-auth.js";
 import type { ServerAccessService, ServerRole } from "../auth/server-access.js";
+import type { ServerInvitationService } from "../auth/server-invitations.js";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -74,6 +75,7 @@ export type DirectoryApiOptions = {
   storageMode?: "memory" | "postgres";
   ownerAuth?: OwnerAuthService;
   serverAccess?: ServerAccessService;
+  invitations?: ServerInvitationService;
 };
 
 export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
@@ -143,6 +145,45 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       }
       await options.ownerAuth.logout(token);
       send(response, 200, { loggedOut: true });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/invitations/accept") {
+      if (!options.invitations) {
+        send(response, 503, { error: "invitations_unavailable" });
+        return;
+      }
+      try {
+        const body = object(await readJson(request));
+        if (typeof body.token !== "string" || typeof body.password !== "string") throw new Error("INVALID_BODY");
+        const session = await options.invitations.accept(body.token, body.password);
+        send(response, 201, session);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "";
+        const status = reason === "ACCOUNT_EXISTS" ? 409 : reason === "INVALID_INVITATION" ? 410 : reason === "BODY_TOO_LARGE" ? 413 : 400;
+        send(response, status, { error: status === 409 ? "account_exists" : status === 410 ? "invitation_invalid_or_expired" : "invalid_request" });
+      }
+      return;
+    }
+
+    const invitationRoute = /^\\/v1\\/servers\\/([0-9a-f-]{36})\\/invitations$/.exec(url.pathname);
+    if (invitationRoute && request.method === "POST" && options.ownerAuth && options.invitations) {
+      const token = bearer(request);
+      const owner = token ? await options.ownerAuth.authenticate(token) : null;
+      if (!owner) {
+        send(response, 401, { error: "unauthorized" });
+        return;
+      }
+      try {
+        const body = object(await readJson(request));
+        if (typeof body.email !== "string" || (body.role !== "admin" && body.role !== "moderator")) throw new Error("INVALID_BODY");
+        const created = await options.invitations.create(invitationRoute[1], owner, body.email, body.role as Exclude<ServerRole, "owner">);
+        send(response, 201, created);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "";
+        const status = reason === "FORBIDDEN" ? 403 : reason === "ACCOUNT_EXISTS" ? 409 : reason === "BODY_TOO_LARGE" ? 413 : 400;
+        send(response, status, { error: status === 403 ? "forbidden" : status === 409 ? "account_exists" : "invalid_request" });
+      }
       return;
     }
 
