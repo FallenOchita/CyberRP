@@ -8,6 +8,7 @@ export type RuntimeContext = {
 
 export type RuntimeHandle = {
   stop: () => Promise<void>;
+  sendEvent?: (eventName: string, payload: import('./protocol').JsonValue) => void;
 };
 
 /**
