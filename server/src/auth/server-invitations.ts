@@ -22,7 +22,7 @@ async function passwordDigest(password: string, salt: Buffer): Promise<Buffer> {
 
 function normalizeEmail(value: string): string {
   const email = value.trim().toLowerCase();
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) throw new Error("INVALID_EMAIL");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error("INVALID_EMAIL");
   return email;
 }
 
