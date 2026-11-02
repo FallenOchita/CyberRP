@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { InMemoryServerRegistry, credentialsMatch, type ServerRegistration } from "./server-registry";
+import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRegistration } from "./server-registry";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -76,6 +76,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
     throw new Error("CYBERRP_REGISTRATION_KEY must be configured with at least 24 characters.");
   }
   const registry = options.registry ?? new InMemoryServerRegistry();
+  const registrationKeyHash = hashCredential(options.registrationKey).toString("base64url");
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -93,7 +94,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
     }
 
     if (request.method === "POST" && url.pathname === "/v1/servers") {
-      if (!credentialsMatch(bearer(request) ?? "", options.registrationKey)) {
+      if (!credentialsMatch(bearer(request) ?? "", registrationKeyHash)) {
         send(response, 401, { error: "unauthorized" });
         return;
       }
