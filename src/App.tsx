@@ -62,14 +62,26 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState<GameInstall | null>(null);
   const [gameMessage, setGameMessage] = useState("Checking for Cyberpunk 2077...");
   const [checkingGame, setCheckingGame] = useState(false);
+  const [launchingGame, setLaunchingGame] = useState(false);
 
   useEffect(() => {
     window.cyberrp?.getVersion().then(setVersion).catch(() => undefined);
-    window.cyberrp?.detectGame().then((installs) => {
-      setGameInstalls(installs);
-      setSelectedGame(installs[0] ?? null);
-      setGameMessage(installs.length ? "Installation detected" : "No installation detected");
-    }).catch(() => setGameMessage("Game detection unavailable in web preview"));
+    if (!window.cyberrp) {
+      setGameMessage("Game detection unavailable in web preview");
+      return;
+    }
+    Promise.all([window.cyberrp.detectGame(), window.cyberrp.getSelectedGame()])
+      .then(async ([installs, saved]) => {
+        setGameInstalls(installs);
+        const chosen = saved ?? installs[0] ?? null;
+        setSelectedGame(chosen);
+        setGameMessage(chosen ? "Installation ready" : "No installation detected");
+        if (!saved && installs[0]) {
+          const persisted = await window.cyberrp!.setSelectedGame(installs[0]);
+          setSelectedGame(persisted);
+        }
+      })
+      .catch(() => setGameMessage("Game detection unavailable in this build"));
   }, []);
 
   const visibleServers = demoServers.filter((server) => {
@@ -86,8 +98,11 @@ export default function App() {
     try {
       const installs = await window.cyberrp.detectGame();
       setGameInstalls(installs);
-      setSelectedGame(installs[0] ?? null);
-      setGameMessage(installs.length ? "Installation detected" : "No installation detected");
+      const chosen = selectedGame && installs.some((item) => item.path === selectedGame.path)
+        ? selectedGame : installs[0] ?? null;
+      const saved = await window.cyberrp.setSelectedGame(chosen);
+      setSelectedGame(saved);
+      setGameMessage(saved ? "Installation ready and saved" : "No installation detected");
     } catch {
       setGameMessage("Could not scan for the game.");
     } finally { setCheckingGame(false); }
@@ -98,13 +113,30 @@ export default function App() {
     try {
       const install = await window.cyberrp.selectGame();
       if (install) {
-        setSelectedGame(install);
+        const saved = await window.cyberrp.setSelectedGame(install);
+        setSelectedGame(saved);
         setGameInstalls((current) => [...current.filter((item) => item.executable !== install.executable), install]);
-        setGameMessage("Game folder verified");
+        setGameMessage("Game folder verified and saved");
       } else {
         setGameMessage("Folder selection cancelled or invalid.");
       }
     } catch { setGameMessage("Could not verify that folder."); }
+  };
+
+  const launchGame = async () => {
+    if (!window.cyberrp) {
+      setGameMessage("Game launching is available in the desktop launcher.");
+      return;
+    }
+    setLaunchingGame(true);
+    try {
+      const result = await window.cyberrp.launchGame();
+      setGameMessage(result.message);
+    } catch {
+      setGameMessage("Could not start Cyberpunk 2077.");
+    } finally {
+      setLaunchingGame(false);
+    }
   };
 
   const toggleFavorite = (id: string) => {
@@ -133,11 +165,11 @@ export default function App() {
       <main className="main-content">
         <header className="topbar"><div className="breadcrumb">NIGHT CITY <ChevronRight size={13}/> <span>{page.toUpperCase()}</span></div><div className="top-actions"><span className="connection"><Wifi size={14}/> DIRECTORY DEMO</span><button className="icon-button" aria-label="Settings" onClick={() => setPage("settings")}><Settings size={18}/></button></div></header>
         {page === "settings" ? (
-          <section className="content-area"><div className="eyebrow">PREFERENCES</div><h1>Launcher settings</h1><p className="muted">Your local launcher configuration will live here.</p><div className="settings-card"><div><strong>Application version</strong><p>Current launcher build</p></div><span>{version}</span></div><div className="settings-card"><div><strong>Cyberpunk 2077 installation</strong><p>{gameMessage}</p>{selectedGame && <p className="game-path">{selectedGame.source} · {selectedGame.path}</p>}</div><span className={selectedGame ? "pill" : "pill warning"}>{selectedGame ? "Detected" : "Not found"}</span></div><div className="settings-actions"><button className="filter-button" onClick={scanForGame} disabled={checkingGame}>{checkingGame ? "SCANNING..." : "SCAN AGAIN"}</button><button className="primary-button" onClick={locateGame}>LOCATE GAME FOLDER</button></div><div className="settings-card"><div><strong>Automatic updates</strong><p>Signed update delivery will be enabled in a later milestone.</p></div><span className="pill">Planned</span></div></section>
+          <section className="content-area"><div className="eyebrow">PREFERENCES</div><h1>Launcher settings</h1><p className="muted">Your local launcher configuration will live here.</p><div className="settings-card"><div><strong>Application version</strong><p>Current launcher build</p></div><span>{version}</span></div><div className="settings-card"><div><strong>Cyberpunk 2077 installation</strong><p>{gameMessage}</p>{selectedGame && <p className="game-path">{selectedGame.source} · {selectedGame.path}</p>}</div><span className={selectedGame ? "pill" : "pill warning"}>{selectedGame ? "Detected" : "Not found"}</span></div><div className="settings-actions"><button className="filter-button" onClick={scanForGame} disabled={checkingGame}>{checkingGame ? "SCANNING..." : "SCAN AGAIN"}</button><button className="primary-button" onClick={locateGame}>LOCATE GAME FOLDER</button></div><div className="settings-card"><div><strong>Launch integration</strong><p>Steam installations open through Steam. Other installations use REDprelauncher when available, with a validated game executable fallback.</p></div><span className="pill">{selectedGame?.source ?? "Unconfigured"}</span></div><div className="settings-card"><div><strong>Automatic updates</strong><p>Signed update delivery will be enabled in a later milestone.</p></div><span className="pill">Planned</span></div></section>
         ) : (
           <section className="content-area">
             <div className="hero">
-              <div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line"/> YOUR CITY. YOUR STORY.</div><h1>Find your place<br/>in <em>Night City.</em></h1><p>Discover roleplay communities, meet your crew, and write your own legend.</p><button className="primary-button" onClick={() => { setPage("discover"); document.getElementById("server-browser")?.scrollIntoView({ behavior: "smooth" }); }}> <Globe2 size={17}/> EXPLORE SERVERS</button></div>
+              <div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line"/> YOUR CITY. YOUR STORY.</div><h1>Find your place<br/>in <em>Night City.</em></h1><p>Discover roleplay communities, meet your crew, and write your own legend.</p><div className="hero-actions"><button className="primary-button" onClick={launchGame} disabled={!selectedGame || launchingGame}><Gamepad2 size={17}/> {launchingGame ? "STARTING..." : "PLAY CYBERPUNK 2077"}</button><button className="filter-button" onClick={() => { setPage("discover"); document.getElementById("server-browser")?.scrollIntoView({ behavior: "smooth" }); }}><Globe2 size={17}/> EXPLORE SERVERS</button></div><small className="connect-note">{gameMessage}</small></div>
               <div className="hero-art"><div className="sun-disc"/><div className="city-grid"/><div className="hero-caption">NIGHT CITY<br/><b>NEVER SLEEPS</b></div></div>
             </div>
             <div className="section-heading" id="server-browser"><div><div className="eyebrow">THE NETWORK</div><h2>{page === "favorites" ? "Your favorites" : page === "recent" ? "Recently played" : "Discover servers"}</h2></div><div className="server-total"><Activity size={15}/> {visibleServers.length} LISTED</div></div>
