@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID, scrypt as scryptCallback } from "node:crypto";
+import { randomBytes, randomUUID, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
 import type { Pool } from "pg";
 import { hashCredential } from "../api/server-registry";
