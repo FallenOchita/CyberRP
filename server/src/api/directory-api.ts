@@ -312,6 +312,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
     let pool: import("pg").Pool | undefined;
     let ownerAuth: OwnerAuthService | undefined;
     let serverAccess: ServerAccessService | undefined;
+    let invitations: ServerInvitationService | undefined;
 
     if (databaseUrl) {
       const { Pool } = await import("pg");
@@ -326,10 +327,12 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       ownerAuth = new OwnerAuthService(pool);
       const { ServerAccessService } = await import("../auth/server-access.js");
       serverAccess = new ServerAccessService(pool);
+      const { ServerInvitationService } = await import("../auth/server-invitations.js");
+      invitations = new ServerInvitationService(pool);
       storageMode = "postgres";
     }
 
-    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth, serverAccess });
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth, serverAccess, invitations });
     server.on("close", () => { void pool?.end(); });
     server.listen(port, "0.0.0.0", () => {
       process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);
