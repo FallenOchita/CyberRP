@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "name": "hello-js",
+  "version": "0.1.0",
+  "description": "Example JavaScript resource for CyberRP.",
+  "author": "CyberRP",
+  "language": "javascript",
+  "entrypoints": {
+    "server": "server/index.js"
+  },
+  "permissions": []
+}
