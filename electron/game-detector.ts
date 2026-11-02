@@ -6,6 +6,7 @@ export type GameInstall = {
   path: string;
   executable: string;
   source: "Steam" | "GOG" | "Epic Games" | "Manual";
+  launcherExecutable?: string;
 };
 
 const executableName = process.platform === "win32"
@@ -90,12 +91,19 @@ export async function detectGameInstallations(): Promise<GameInstall[]> {
     const key = executable.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    results.push({ path: candidate.path, executable, source: candidate.source });
+    const launcherPath = join(candidate.path, "REDprelauncher.exe");
+    let launcherExecutable: string | undefined;
+    try { await access(launcherPath); launcherExecutable = launcherPath; } catch { /* Direct launch fallback. */ }
+    results.push({ path: candidate.path, executable, source: candidate.source, launcherExecutable });
   }
   return results;
 }
 
 export async function validateGameFolder(path: string): Promise<GameInstall | null> {
   const executable = await executableAt(path);
-  return executable ? { path, executable, source: "Manual" } : null;
+  if (!executable) return null;
+  const launcherPath = join(path, "REDprelauncher.exe");
+  let launcherExecutable: string | undefined;
+  try { await access(launcherPath); launcherExecutable = launcherPath; } catch { /* Direct launch fallback. */ }
+  return { path, executable, source: "Manual", launcherExecutable };
 }
