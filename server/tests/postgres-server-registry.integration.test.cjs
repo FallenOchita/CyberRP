@@ -15,9 +15,13 @@ test("PostgreSQL registry persists registrations and enforces server credentials
     await pool.end();
   });
 
-  const applied = await runMigrations(pool);
-  assert.ok(applied.includes("001_create_cyberrp_servers.sql"));
-  assert.deepEqual(await runMigrations(pool), [], "a second run must be a no-op");
+  await runMigrations(pool);
+  assert.deepEqual(await runMigrations(pool), [], "a repeated run must be a no-op");
+  const migrationRecord = await pool.query(
+    "SELECT 1 FROM cyberrp_schema_migrations WHERE version = $1",
+    ["001_create_cyberrp_servers.sql"]
+  );
+  assert.equal(migrationRecord.rowCount, 1);
 
   const registry = new PostgresServerRegistry(pool);
   const registration = {
