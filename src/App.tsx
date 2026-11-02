@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Activity, ArrowDownToLine, ChevronRight, Compass, Gamepad2, Globe2,
+  Activity, ChevronRight, Compass, Gamepad2, Globe2,
   Heart, History, Search, Settings, ShieldCheck, Users, Wifi
 } from "lucide-react";
 
@@ -58,9 +58,18 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selected, setSelected] = useState<Server | null>(demoServers[0]);
   const [version, setVersion] = useState("Web preview");
+  const [gameInstalls, setGameInstalls] = useState<GameInstall[]>([]);
+  const [selectedGame, setSelectedGame] = useState<GameInstall | null>(null);
+  const [gameMessage, setGameMessage] = useState("Checking for Cyberpunk 2077...");
+  const [checkingGame, setCheckingGame] = useState(false);
 
   useEffect(() => {
     window.cyberrp?.getVersion().then(setVersion).catch(() => undefined);
+    window.cyberrp?.detectGame().then((installs) => {
+      setGameInstalls(installs);
+      setSelectedGame(installs[0] ?? null);
+      setGameMessage(installs.length ? "Installation detected" : "No installation detected");
+    }).catch(() => setGameMessage("Game detection unavailable in web preview"));
   }, []);
 
   const visibleServers = demoServers.filter((server) => {
@@ -70,6 +79,33 @@ export default function App() {
     if (page === "recent") return matchesQuery && server.id === "night-city-life";
     return matchesQuery;
   });
+
+  const scanForGame = async () => {
+    if (!window.cyberrp) { setGameMessage("Run the desktop launcher to scan your PC."); return; }
+    setCheckingGame(true);
+    try {
+      const installs = await window.cyberrp.detectGame();
+      setGameInstalls(installs);
+      setSelectedGame(installs[0] ?? null);
+      setGameMessage(installs.length ? "Installation detected" : "No installation detected");
+    } catch {
+      setGameMessage("Could not scan for the game.");
+    } finally { setCheckingGame(false); }
+  };
+
+  const locateGame = async () => {
+    if (!window.cyberrp) { setGameMessage("Folder selection is available in the desktop launcher."); return; }
+    try {
+      const install = await window.cyberrp.selectGame();
+      if (install) {
+        setSelectedGame(install);
+        setGameInstalls((current) => [...current.filter((item) => item.executable !== install.executable), install]);
+        setGameMessage("Game folder verified");
+      } else {
+        setGameMessage("Folder selection cancelled or invalid.");
+      }
+    } catch { setGameMessage("Could not verify that folder."); }
+  };
 
   const toggleFavorite = (id: string) => {
     setFavorites((current) => current.includes(id)
@@ -88,7 +124,7 @@ export default function App() {
           <button className={page === "favorites" ? "nav-item active" : "nav-item"} onClick={() => setPage("favorites")}><Heart size={18}/> Favorites</button>
         </nav>
         <div className="sidebar-bottom">
-          <div className="game-status"><div className="status-dot"/> <span>Cyberpunk 2077</span><small>GAME STATUS UNVERIFIED</small></div>
+          <div className="game-status"><div className={selectedGame ? "status-dot" : "status-dot offline"}/> <span>Cyberpunk 2077</span><small>{selectedGame ? "GAME INSTALLATION FOUND" : "GAME NOT DETECTED"}</small></div>
           <button className={page === "settings" ? "nav-item active" : "nav-item"} onClick={() => setPage("settings")}><Settings size={18}/> Settings</button>
           <div className="profile"><div className="avatar">NC</div><div><strong>Guest Runner</strong><small>LOCAL PROFILE</small></div><ChevronRight size={16}/></div>
         </div>
@@ -97,7 +133,7 @@ export default function App() {
       <main className="main-content">
         <header className="topbar"><div className="breadcrumb">NIGHT CITY <ChevronRight size={13}/> <span>{page.toUpperCase()}</span></div><div className="top-actions"><span className="connection"><Wifi size={14}/> DIRECTORY DEMO</span><button className="icon-button" aria-label="Settings" onClick={() => setPage("settings")}><Settings size={18}/></button></div></header>
         {page === "settings" ? (
-          <section className="content-area"><div className="eyebrow">PREFERENCES</div><h1>Launcher settings</h1><p className="muted">Your local launcher configuration will live here.</p><div className="settings-card"><div><strong>Application version</strong><p>Current launcher build</p></div><span>{version}</span></div><div className="settings-card"><div><strong>Game integration</strong><p>Game detection and launch support are planned.</p></div><span className="pill warning">Not configured</span></div><div className="settings-card"><div><strong>Automatic updates</strong><p>Signed update delivery will be enabled in a later milestone.</p></div><span className="pill">Planned</span></div></section>
+          <section className="content-area"><div className="eyebrow">PREFERENCES</div><h1>Launcher settings</h1><p className="muted">Your local launcher configuration will live here.</p><div className="settings-card"><div><strong>Application version</strong><p>Current launcher build</p></div><span>{version}</span></div><div className="settings-card"><div><strong>Cyberpunk 2077 installation</strong><p>{gameMessage}</p>{selectedGame && <p className="game-path">{selectedGame.source} · {selectedGame.path}</p>}</div><span className={selectedGame ? "pill" : "pill warning"}>{selectedGame ? "Detected" : "Not found"}</span></div><div className="settings-actions"><button className="filter-button" onClick={scanForGame} disabled={checkingGame}>{checkingGame ? "SCANNING..." : "SCAN AGAIN"}</button><button className="primary-button" onClick={locateGame}>LOCATE GAME FOLDER</button></div><div className="settings-card"><div><strong>Automatic updates</strong><p>Signed update delivery will be enabled in a later milestone.</p></div><span className="pill">Planned</span></div></section>
         ) : (
           <section className="content-area">
             <div className="hero">
