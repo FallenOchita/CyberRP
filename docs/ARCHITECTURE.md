@@ -12,16 +12,16 @@
 
 - **Shared resource contract:** `cyberrp.resource.json` describes language, version, server/client/shared entrypoints, dependencies, and requested permissions.
 - **Resource catalog:** discovers resource folders and validates manifests before they can be considered for loading.
-- **C# adapter:** planned isolated .NET worker using the CyberRP.SDK contracts.
-- **JavaScript adapter:** planned isolated Node.js worker using the typed CyberRP JavaScript API.
-- **Lua adapter:** planned isolated Lua 5.4 worker using the documented CyberRP Lua API.
+- **C# adapter:** experimental .NET worker process using the CyberRP.SDK contracts.
+- **JavaScript adapter:** experimental Node.js worker process using the typed CyberRP JavaScript API.
+- **Lua adapter:** experimental Lua 5.4 worker process using the documented CyberRP Lua API.
 - **Host boundary:** each runtime will communicate with the server host through a versioned, permission-checked message protocol. Resource scripts will not run in the launcher or API process.
 
-The current repository contains the manifest contract, schema, catalog discovery function, SDK starting points, a JavaScript sample, a versioned newline-delimited JSON host protocol, an event bus, and a runtime lifecycle manager. Executable language workers, production isolation, RPC permission enforcement, and actual game APIs remain future implementation work.
+The repository contains the manifest contract, schema, catalog discovery function, SDK starting points, example resources, versioned newline-delimited JSON host protocol, executable JavaScript/C#/Lua workers, cross-runtime event routing, and a dependency-aware lifecycle manager. Production isolation, comprehensive RPC permission enforcement, and actual game APIs remain future implementation work.
 
 ## Planned services
 
-1. Public directory API: server listings, health/status, tags, and community metadata.
+1. Public directory API: initial in-memory server registration, listings, heartbeats, and removal are implemented; PostgreSQL persistence, rate limiting, and production deployment controls remain outstanding.
 2. Identity API: account registration, sessions, and player profiles.
 3. Resource service: versioned manifests, hashes, and download metadata.
 4. Admin API: authenticated server-owner management.
