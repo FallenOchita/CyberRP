@@ -269,7 +269,8 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
     let registry: ServerRegistry = new InMemoryServerRegistry();
     let storageMode: "memory" | "postgres" = "memory";
     let pool: import("pg").Pool | undefined;
-    let ownerAuth: OwnerAuthService | undefined;\n    let serverAccess: ServerAccessService | undefined;
+    let ownerAuth: OwnerAuthService | undefined;
+    let serverAccess: ServerAccessService | undefined;
 
     if (databaseUrl) {
       const { Pool } = await import("pg");
@@ -281,7 +282,9 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       const { PostgresServerRegistry } = await import("./postgres-server-registry.js");
       registry = new PostgresServerRegistry(pool);
       const { OwnerAuthService } = await import("../auth/owner-auth.js");
-      ownerAuth = new OwnerAuthService(pool);\n      const { ServerAccessService } = await import("../auth/server-access.js");\n      serverAccess = new ServerAccessService(pool);
+      ownerAuth = new OwnerAuthService(pool);
+      const { ServerAccessService } = await import("../auth/server-access.js");
+      serverAccess = new ServerAccessService(pool);
       storageMode = "postgres";
     }
 
