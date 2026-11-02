@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { pathToFileURL } from "node:url";
 
 const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
 const listeners = new Map();
@@ -67,7 +68,7 @@ async function handle(line) {
     });
 
     try {
-      await import(new URL(request.entrypoint, "file://").href);
+      await import(pathToFileURL(request.entrypoint).href);
       started = true;
       send({ type: "ready", id: request.id });
     } catch (error) {
