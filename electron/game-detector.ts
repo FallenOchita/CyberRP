@@ -72,6 +72,7 @@ export async function detectGameInstallations(): Promise<GameInstall[]> {
       process.env["ProgramW6432"]
     ].filter((value): value is string => Boolean(value));
     for (const root of roots) {
+      candidates.push({ path: join(root, "GOG Games", "Cyberpunk 2077"), source: "GOG" });
       candidates.push({ path: join(root, "GOG Galaxy", "Games", "Cyberpunk 2077"), source: "GOG" });
       candidates.push({ path: join(root, "Epic Games", "Cyberpunk2077"), source: "Epic Games" });
       candidates.push({ path: join(root, "Epic Games", "Cyberpunk 2077"), source: "Epic Games" });
