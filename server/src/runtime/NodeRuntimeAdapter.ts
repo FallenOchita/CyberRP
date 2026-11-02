@@ -71,13 +71,14 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
       }
     });
 
-    return this.waitForReady(child, manifest.name, entrypoint);
+    return this.waitForReady(child, manifest.name, entrypoint, context.emitEvent);
   }
 
   private waitForReady(
     child: ChildProcessWithoutNullStreams,
     resourceName: string,
-    entrypoint: string
+    entrypoint: string,
+    emitEvent?: (eventName: string, payload: JsonValue) => void
   ): Promise<RuntimeHandle> {
     return new Promise((resolveReady, rejectReady) => {
       const requestId = randomUUID();
@@ -115,6 +116,7 @@ export class NodeRuntimeAdapter implements RuntimeAdapter {
         }
 
         this.options.onMessage?.(resourceName, message);
+        if (message.type === "emit") emitEvent?.(message.eventName, message.payload);
         if (message.type === "fatal") {
           fail(new Error(`JavaScript resource failed to start: ${message.error}`));
         } else if (message.type === "ready" && message.id === requestId && !settled) {
