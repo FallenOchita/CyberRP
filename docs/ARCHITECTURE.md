@@ -4,7 +4,8 @@
 
 - **Renderer:** React UI only. No Node.js integration and no direct filesystem access.
 - **Preload:** Exposes a minimal typed API through `contextBridge`.
-- **Main process:** Owns Electron window lifecycle and privileged operations.
+- **Main process:** Owns Electron window lifecycle, local settings persistence, game validation, and game launch operations.
+- **Game launch:** Steam installs are handed to Steam using Cyberpunk 2077's app ID; other supported installs prefer CD PROJEKT RED's REDprelauncher when available, then use the validated game executable.
 - **Directory data:** Currently static demo fixtures in the renderer. A future API client will replace these fixtures.
 
 ## Planned services
