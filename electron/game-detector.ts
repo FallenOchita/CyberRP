@@ -105,5 +105,13 @@ export async function validateGameFolder(path: string): Promise<GameInstall | nu
   const launcherPath = join(path, "REDprelauncher.exe");
   let launcherExecutable: string | undefined;
   try { await access(launcherPath); launcherExecutable = launcherPath; } catch { /* Direct launch fallback. */ }
-  return { path, executable, source: "Manual", launcherExecutable };
+  const normalizedPath = normalize(path).toLowerCase().replace(/\\\\/g, "/");
+  const source: GameInstall["source"] = normalizedPath.includes("/steamapps/common/")
+    ? "Steam"
+    : normalizedPath.includes("/epic games/")
+      ? "Epic Games"
+      : normalizedPath.includes("/gog games/") || normalizedPath.includes("/gog galaxy/")
+        ? "GOG"
+        : "Manual";
+  return { path, executable, source, launcherExecutable };
 }
