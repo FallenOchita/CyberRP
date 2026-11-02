@@ -65,10 +65,10 @@ export class LuaRuntimeAdapter implements RuntimeAdapter {
       }
     });
 
-    return this.waitForReady(child, manifest.name, entrypoint);
+    return this.waitForReady(child, manifest.name, entrypoint, context.emitEvent);
   }
 
-  private waitForReady(child: ChildProcessWithoutNullStreams, resourceName: string, entrypoint: string): Promise<RuntimeHandle> {
+  private waitForReady(child: ChildProcessWithoutNullStreams, resourceName: string, entrypoint: string, emitEvent?: (eventName: string, payload: JsonValue) => void): Promise<RuntimeHandle> {
     return new Promise((resolveReady, rejectReady) => {
       const id = randomUUID();
       const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
@@ -93,6 +93,7 @@ export class LuaRuntimeAdapter implements RuntimeAdapter {
           return fail(new Error("Lua worker sent an invalid protocol message."));
         }
         this.options.onMessage?.(resourceName, message);
+        if (message.type === "emit") emitEvent?.(message.eventName, message.payload);
         if (message.type === "fatal") return fail(new Error(message.error));
         if (message.type === "ready" && message.id === id && !settled) {
           settled = true;
