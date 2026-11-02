@@ -17,7 +17,7 @@
 - **Lua adapter:** planned isolated Lua 5.4 worker using the documented CyberRP Lua API.
 - **Host boundary:** each runtime will communicate with the server host through a versioned, permission-checked message protocol. Resource scripts will not run in the launcher or API process.
 
-The current repository contains the manifest contract, schema, catalog discovery function, SDK starting points, and a JavaScript sample. Runtime workers, resource lifecycle management, RPC transport, and actual game APIs remain future implementation work.
+The current repository contains the manifest contract, schema, catalog discovery function, SDK starting points, a JavaScript sample, a versioned newline-delimited JSON host protocol, an event bus, and a runtime lifecycle manager. Executable language workers, production isolation, RPC permission enforcement, and actual game APIs remain future implementation work.
 
 ## Planned services
 
