@@ -142,3 +142,15 @@ JSON body:
 Successful redemption atomically creates the account, adds the invited role to that server, marks the invitation as redeemed, and returns a 12-hour owner session. A token cannot be reused or redeemed after expiry. The database stores only a hash of each invitation token. If the email already has an account, the API returns a conflict; account-linking and multi-server account invitations are not yet supported.
 
 Unclaimed servers remain visible in the public directory and continue to use their server-host credential for heartbeat operations. The owner role controls dashboard membership; it does not replace the server-host credential.
+
+## Desktop owner dashboard
+
+The desktop launcher includes a **Server management** page for signing in, claiming an unowned directory server, viewing its staff, creating staff invitations, and removing lower-role staff. Configure the directory endpoint at renderer build time with:
+
+```bash
+VITE_CYBERRP_API_URL=https://directory.example.com npm run build
+```
+
+When unset, the dashboard uses `http://127.0.0.1:8787` for local development. The API permits cross-origin requests for the desktop renderer; authentication uses explicit bearer headers, not browser cookies. Keep the API behind HTTPS before using owner accounts outside a local development environment. The current dashboard keeps the session token in memory only, so signing out or restarting the launcher requires signing in again.
+
+The dashboard requires PostgreSQL-backed owner authentication and migrations 002–004. It currently accepts a server UUID copied from the directory/hosting setup; automatic discovery of servers owned by the signed-in account is a follow-up.
