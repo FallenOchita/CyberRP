@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -51,12 +51,20 @@ test("registration refuses to overwrite an existing credential file", async (t) 
   const directory = await mkdtemp(join(tmpdir(), "cyberrp-register-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const outputPath = join(directory, "host.json");
+  const originalContents = '{"credential":"keep-this-existing-secret"}\n';
+  await writeFile(outputPath, originalContents, { encoding: "utf8", mode: 0o600 });
   let requested = false;
+
   await assert.rejects(registerServer(valid(outputPath), {
-    fetcher: async () => { requested = true; return new Response(JSON.stringify({
-      server: { id: "123e4567-e89b-42d3-a456-426614174000" },
-      credential: "one-time-host-credential-value-1234567890"
-    }), { status: 201 }); }
-  }));
+    fetcher: async () => {
+      requested = true;
+      return new Response(JSON.stringify({
+        server: { id: "123e4567-e89b-42d3-a456-426614174000" },
+        credential: "one-time-host-credential-value-1234567890"
+      }), { status: 201 });
+    }
+  }), { code: "EEXIST" });
+
   assert.equal(requested, false, "an existing destination must be rejected before registration");
+  assert.equal(await readFile(outputPath, "utf8"), originalContents, "existing credential content must remain unchanged");
 });
