@@ -16,7 +16,8 @@
     "api:start": "npm run api:build && node -e \"process.env.CYBERRP_API_AUTOSTART='1'; require('./dist-server/server/src/api/directory-api.js')\"",
     "test:postgres": "node --test --test-concurrency=1 server/tests/*.test.cjs",
     "api:migrate": "npm run api:build && node -e \"const {Pool}=require('pg'); const {runMigrations}=require('./dist-server/server/src/db/migrate.js'); const pool=new Pool({connectionString:process.env.DATABASE_URL}); runMigrations(pool).then(x=>console.log(x.length ? x.join('\\\\n') : 'No pending migrations')).finally(()=>pool.end()).catch(e=>{console.error(e);process.exitCode=1})\"",
-    "api:register": "node scripts/register-server.mjs"
+    "api:register": "node scripts/register-server.mjs",
+    "test:registration": "node --test scripts/tests/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
