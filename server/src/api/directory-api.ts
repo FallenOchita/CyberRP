@@ -89,6 +89,16 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
   const registrationKeyHash = hashCredential(options.registrationKey).toString("base64url");
 
   const server = createServer(async (request, response) => {
+    if (request.method === "OPTIONS") {
+      response.writeHead(204, {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+        "access-control-allow-headers": "Authorization, Content-Type",
+        "access-control-max-age": "600"
+      });
+      response.end();
+      return;
+    }
     const url = new URL(request.url ?? "/", "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
       send(response, 200, { status: "ok", storage: options.storageMode ?? "memory" });
