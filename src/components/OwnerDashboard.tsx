@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, LogIn, LogOut, MailPlus, RefreshCw, Shield, Users } from "lucide-react";
 
 type Owner = { id: string; email: string; createdAt: string };
 type Member = { ownerId: string; email: string; role: "owner" | "admin" | "moderator"; joinedAt: string };
-type OwnedServer = { id: string; name: string; address: string; port: number; playerCount: number; maxPlayers: number; status: "online" | "offline" };
+type OwnedServer = { id: string; name: string; address: string; port: number; playerCount: number; maxPlayers: number; status: "online" | "offline"; lastHeartbeatAt: string };
 type Session = { owner: Owner; token: string; expiresAt: string };
 type Invitation = { invitation: { id: string; serverId: string; email: string; role: "admin" | "moderator"; expiresAt: string }; token: string };
 
@@ -35,6 +35,29 @@ export default function OwnerDashboard() {
   const [createdInvite, setCreatedInvite] = useState<Invitation | null>(null);
   const [notice, setNotice] = useState("Sign in with your CyberRP owner account to manage a community.");
   const [busy, setBusy] = useState(false);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
+  const [lastStatusRefresh, setLastStatusRefresh] = useState<string | null>(null);
+
+  const refreshOwnedServers = async (token: string, quiet = false) => {
+    if (!quiet) setRefreshingStatus(true);
+    try {
+      const owned = await request<{ servers: OwnedServer[] }>("/v1/servers/mine", token);
+      setOwnedServers(owned.servers);
+      setLastStatusRefresh(new Date().toISOString());
+    } catch (error) {
+      if (!quiet) setNotice(error instanceof Error ? error.message : "Could not refresh host status.");
+    } finally {
+      if (!quiet) setRefreshingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!session) return;
+    const timer = window.setInterval(() => {
+      void refreshOwnedServers(session.token, true);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [session?.token]);
 
   const signIn = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -114,6 +137,7 @@ export default function OwnerDashboard() {
     setSession(null);
     setMembers([]);
     setOwnedServers([]);
+    setLastStatusRefresh(null);
     setServerId("");
     setCreatedInvite(null);
     setNotice("You are signed out.");
@@ -139,9 +163,10 @@ export default function OwnerDashboard() {
           <div className="owner-panel">
             <div className="owner-panel-title"><Shield size={18}/><strong>Signed in</strong><span className="owner-role">{session.owner.email}</span></div>
             {ownedServers.length > 0 && <div className="owned-server-list">
-              <div className="owned-server-heading">YOUR SERVERS</div>
+              <div className="owned-server-heading">YOUR SERVERS <button type="button" className="status-refresh" onClick={() => session && void refreshOwnedServers(session.token)} disabled={refreshingStatus}><RefreshCw size={13}/>{refreshingStatus ? "UPDATING" : "REFRESH STATUS"}</button></div>
+              <small className="status-refresh-time">{lastStatusRefresh ? `Directory refreshed ${new Date(lastStatusRefresh).toLocaleTimeString()}` : "Waiting for first status refresh"}</small>
               {ownedServers.map(server => <button type="button" className={serverId === server.id ? "owned-server selected" : "owned-server"} key={server.id} onClick={() => { setServerId(server.id); setMembers([]); setCreatedInvite(null); }}>
-                <span><strong>{server.name}</strong><small>{server.address}:{server.port} · {server.playerCount}/{server.maxPlayers} players</small></span>
+                <span><strong>{server.name}</strong><small>{server.address}:{server.port} · {server.playerCount}/{server.maxPlayers} players</small><small className="heartbeat-time">Last heartbeat: {new Date(server.lastHeartbeatAt).toLocaleString()}</small></span>
                 <small className={server.status === "online" ? "server-online" : "server-offline"}>{server.status.toUpperCase()}</small>
               </button>)}
             </div>}
