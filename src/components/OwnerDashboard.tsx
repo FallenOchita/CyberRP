@@ -217,7 +217,7 @@ export default function OwnerDashboard() {
             <button type="button" className="status-refresh history-refresh" onClick={() => void loadHeartbeatHistory()} disabled={loadingHistory || !session}>{loadingHistory ? "LOADING..." : "REFRESH HISTORY"}</button>
             {historySeries.length === 0 ? <p className="owner-help">No heartbeat history is available yet. A host must send a heartbeat after this feature is deployed.</p> : <>
               <div className="heartbeat-summary">
-                <div><strong>{historySeries[historySeries.length - 1].record.playerCount}</strong><small>LATEST REPORTED</small></div>
+                <div><strong>{historySeries[historySeries.length - 1].playerCount}</strong><small>LATEST REPORTED</small></div>
                 <div><strong>{peakPlayers}</strong><small>RECENT PEAK</small></div>
                 <div><strong>{averagePlayers}</strong><small>AVERAGE</small></div>
               </div>
@@ -231,7 +231,7 @@ export default function OwnerDashboard() {
                     <title>{`${point.record.playerCount} players · ${new Date(point.record.receivedAt).toLocaleString()}`}</title>
                   </circle>)}
                 </svg>
-                <div className="heartbeat-chart-labels"><span>{new Date(historySeries[0].record.receivedAt).toLocaleString()}</span><span>{new Date(historySeries[historySeries.length - 1].record.receivedAt).toLocaleString()}</span></div>
+                <div className="heartbeat-chart-labels"><span>{new Date(historySeries[0].receivedAt).toLocaleString()}</span><span>{new Date(historySeries[historySeries.length - 1].receivedAt).toLocaleString()}</span></div>
               </div>
               <div className="heartbeat-history-list">{[...heartbeatHistory].map((record, index) => <div className="heartbeat-history-row" key={`${record.receivedAt}-${index}`}>
                 <span><strong>{record.playerCount}/{selectedCapacity || "—"} players</strong><small>{new Date(record.receivedAt).toLocaleString()}</small></span>
