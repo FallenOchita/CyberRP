@@ -22,7 +22,7 @@ const valid = (outputPath) => ({
 
 test("registration validates transport security and server fields", () => {
   assert.throws(() => validateRegistrationInput({ ...valid("x"), directoryUrl: "http://directory.example.test" }), /HTTPS/);
-  assert.throws(() => validateRegistrationInput({ ...valid("x"), directoryUrl: "http://localhost:8787" }), undefined);
+  assert.doesNotThrow(() => validateRegistrationInput({ ...valid("x"), directoryUrl: "http://localhost:8787" }));
   assert.throws(() => validateRegistrationInput({ ...valid("x"), server: { ...valid("x").server, port: 0 } }), /port/);
 });
 
@@ -51,10 +51,12 @@ test("registration refuses to overwrite an existing credential file", async (t) 
   const directory = await mkdtemp(join(tmpdir(), "cyberrp-register-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const outputPath = join(directory, "host.json");
+  let requested = false;
   await assert.rejects(registerServer(valid(outputPath), {
-    fetcher: async () => new Response(JSON.stringify({
+    fetcher: async () => { requested = true; return new Response(JSON.stringify({
       server: { id: "123e4567-e89b-42d3-a456-426614174000" },
       credential: "one-time-host-credential-value-1234567890"
-    }), { status: 201 })
+    }), { status: 201 }); }
   }));
+  assert.equal(requested, false, "an existing destination must be rejected before registration");
 });
