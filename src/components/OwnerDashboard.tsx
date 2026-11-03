@@ -34,7 +34,9 @@ export default function OwnerDashboard() {
   const [inviteRole, setInviteRole] = useState<"admin" | "moderator">("moderator");
   const [createdInvite, setCreatedInvite] = useState<Invitation | null>(null);
   const [notice, setNotice] = useState("Sign in with your CyberRP owner account to manage a community.");
-  const [busy, setBusy] = useState(false);\n  const [refreshingStatus, setRefreshingStatus] = useState(false);\n  const [lastStatusRefresh, setLastStatusRefresh] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
+  const [lastStatusRefresh, setLastStatusRefresh] = useState<string | null>(null);
 
   const refreshOwnedServers = async (token: string, quiet = false) => {
     if (!quiet) setRefreshingStatus(true);
@@ -134,7 +136,8 @@ export default function OwnerDashboard() {
     }
     setSession(null);
     setMembers([]);
-    setOwnedServers([]);\n    setLastStatusRefresh(null);
+    setOwnedServers([]);
+    setLastStatusRefresh(null);
     setServerId("");
     setCreatedInvite(null);
     setNotice("You are signed out.");
