@@ -62,5 +62,5 @@ test("server ownership claims and role hierarchy are enforced", {
   assert.equal(ownedServers.length, 1);
   assert.equal(ownedServers[0].id, serverId);
   assert.equal(ownedServers[0].name, "RBAC integration server");
-  assert.equal((await access.listServers(adminId)).length, 0);
+  assert.equal((await access.listServers(moderatorId)).length, 0);
 });
