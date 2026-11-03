@@ -32,7 +32,7 @@
 - [ ] Add integration tests for all three runtimes
 
 ## Milestone 3 — Community services
-- [ ] Server detail pages and rule acknowledgement
+- [x] Server detail panel with community rule review and local acknowledgement
 - [ ] Account registration and secure session handling
 - [ ] Character profiles and community identity
 - [ ] Server owner dashboard and moderation roles
