@@ -164,6 +164,7 @@ export default function OwnerDashboard() {
             <div className="owner-panel-title"><Shield size={18}/><strong>Signed in</strong><span className="owner-role">{session.owner.email}</span></div>
             {ownedServers.length > 0 && <div className="owned-server-list">
               <div className="owned-server-heading">YOUR SERVERS <button type="button" className="status-refresh" onClick={() => session && void refreshOwnedServers(session.token)} disabled={refreshingStatus}><RefreshCw size={13}/>{refreshingStatus ? "UPDATING" : "REFRESH STATUS"}</button></div>
+              <small className="status-refresh-time">{lastStatusRefresh ? `Directory refreshed ${new Date(lastStatusRefresh).toLocaleTimeString()}` : "Waiting for first status refresh"}</small>
               {ownedServers.map(server => <button type="button" className={serverId === server.id ? "owned-server selected" : "owned-server"} key={server.id} onClick={() => { setServerId(server.id); setMembers([]); setCreatedInvite(null); }}>
                 <span><strong>{server.name}</strong><small>{server.address}:{server.port} · {server.playerCount}/{server.maxPlayers} players</small><small className="heartbeat-time">Last heartbeat: {new Date(server.lastHeartbeatAt).toLocaleString()}</small></span>
                 <small className={server.status === "online" ? "server-online" : "server-offline"}>{server.status.toUpperCase()}</small>
