@@ -14,6 +14,7 @@ type Server = {
   capacity: number;
   status: "online" | "maintenance";
   featured?: boolean;
+  rules: string[];
 };
 
 const demoServers: Server[] = [
@@ -26,7 +27,8 @@ const demoServers: Server[] = [
     players: 42,
     capacity: 64,
     status: "online",
-    featured: true
+    featured: true,
+    rules: ["Stay in character in public roleplay spaces.", "Respect other players and community staff.", "Do not use exploits, cheats, or disruptive behavior.", "Follow staff instructions and the community reporting process."]
   },
   {
     id: "afterlife",
@@ -36,7 +38,8 @@ const demoServers: Server[] = [
     mode: "Whitelist",
     players: 18,
     capacity: 48,
-    status: "online"
+    status: "online",
+    rules: ["Character-driven roleplay is expected during sessions.", "Keep out-of-character chat in designated channels.", "Respect whitelist decisions and staff rulings."]
   },
   {
     id: "badlands",
@@ -46,7 +49,8 @@ const demoServers: Server[] = [
     mode: "Semi-serious",
     players: 0,
     capacity: 32,
-    status: "maintenance"
+    status: "maintenance",
+    rules: ["Nomad and exploration stories should respect other players.", "Use community channels for out-of-character coordination.", "Report concerns to moderators rather than escalating disputes."]
   }
 ];
 
@@ -57,6 +61,12 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selected, setSelected] = useState<Server | null>(demoServers[0]);
+  const [rulesServer, setRulesServer] = useState<Server | null>(null);
+  const [ruleChecked, setRuleChecked] = useState(false);
+  const [acknowledgedRules, setAcknowledgedRules] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cyberrp-rule-acknowledgements") ?? "[]") as string[]; }
+    catch { return []; }
+  });
   const [version, setVersion] = useState("Web preview");
   const [gameInstalls, setGameInstalls] = useState<GameInstall[]>([]);
   const [selectedGame, setSelectedGame] = useState<GameInstall | null>(null);
@@ -177,7 +187,8 @@ export default function App() {
             <div className="server-layout"><div className="server-list">{visibleServers.map((server) => <article className={selected?.id === server.id ? "server-card selected" : "server-card"} key={server.id} onClick={() => setSelected(server)}><div className="server-thumb"><span>NC</span><small>{server.mode.toUpperCase()}</small></div><div className="server-info"><div className="server-title-row"><h3>{server.name}</h3><button className={favorites.includes(server.id) ? "favorite-button saved" : "favorite-button"} aria-label="Toggle favorite" onClick={(event) => { event.stopPropagation(); toggleFavorite(server.id); }}><Heart size={17} fill={favorites.includes(server.id) ? "currentColor" : "none"}/></button></div><p>{server.description}</p><div className="server-meta"><span><span className={server.status === "online" ? "status-dot" : "status-dot offline"}/>{server.status === "online" ? "Online" : "Maintenance"}</span><span>{server.region}</span><span>{server.players}/{server.capacity} players</span></div></div><ChevronRight className="server-arrow" size={18}/></article>)}
               {visibleServers.length === 0 && <div className="empty-state">No servers match this view yet.</div>}
             </div>
-            <aside className="detail-panel">{selected ? <><div className="detail-art"><span>CYBERRP COMMUNITY</span><b>{selected.name}</b></div><div className="detail-body"><div className="eyebrow">SERVER OVERVIEW</div><h3>{selected.name}</h3><p>{selected.description}</p><div className="detail-stats"><div><strong>{selected.players}/{selected.capacity}</strong><small>PLAYERS</small></div><div><strong>{selected.region}</strong><small>REGION</small></div></div><div className="detail-rule"><ShieldCheck size={17}/><span>Review community rules before connecting.</span></div><button className="connect-button" disabled><Gamepad2 size={17}/> CONNECTION COMING SOON</button><small className="connect-note">Server listings are illustrative demo data. No live server connection is available yet.</small></div></> : <div className="empty-state">Select a server to see its details.</div>}</aside></div>
+            <aside className="detail-panel">{selected ? <><div className="detail-art"><span>CYBERRP COMMUNITY</span><b>{selected.name}</b></div><div className="detail-body"><div className="eyebrow">SERVER OVERVIEW</div><h3>{selected.name}</h3><p>{selected.description}</p><div className="detail-stats"><div><strong>{selected.players}/{selected.capacity}</strong><small>PLAYERS</small></div><div><strong>{selected.region}</strong><small>REGION</small></div></div><div className="detail-rule"><ShieldCheck size={17}/><span>{acknowledgedRules.includes(selected.id) ? "Community rules acknowledged on this device." : "Review community rules before connecting."}</span></div><button className="filter-button rules-button" onClick={() => { setRulesServer(selected); setRuleChecked(false); }}><ShieldCheck size={15}/>{acknowledgedRules.includes(selected.id) ? "VIEW COMMUNITY RULES" : "REVIEW COMMUNITY RULES"}</button><button className="connect-button" disabled><Gamepad2 size={17}/> CONNECTION COMING SOON</button><small className="connect-note">Server listings are illustrative demo data. No live server connection is available yet.</small></div></> : <div className="empty-state">Select a server to see its details.</div>}</aside></div>
+            {rulesServer && <div className="rules-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setRulesServer(null); }}><section className="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div className="eyebrow">COMMUNITY GUIDELINES</div><h2 id="rules-title">{rulesServer.name}</h2><p className="rules-intro">Read these community rules before joining a server. Your acknowledgement is saved locally on this device.</p><ol className="rules-list">{rulesServer.rules.map((rule, index) => <li key={`${rulesServer.id}-${index}`}>{rule}</li>)}</ol><label className="rules-acknowledge"><input type="checkbox" checked={ruleChecked} onChange={(event) => setRuleChecked(event.target.checked)}/><span>I have read and agree to follow these community rules.</span></label><div className="rules-actions"><button className="filter-button" onClick={() => setRulesServer(null)}>CLOSE</button><button className="primary-button" disabled={!ruleChecked} onClick={() => { const next = [...new Set([...acknowledgedRules, rulesServer.id])]; setAcknowledgedRules(next); localStorage.setItem("cyberrp-rule-acknowledgements", JSON.stringify(next)); setRulesServer(null); }}>ACKNOWLEDGE RULES</button></div></section></div>}
           </section>
         )}
         <footer><span>CYBERRP © {new Date().getFullYear()} — COMMUNITY BUILT</span><span>BUILD {version.toUpperCase()}</span></footer>
