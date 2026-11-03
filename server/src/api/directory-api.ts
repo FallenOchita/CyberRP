@@ -10,7 +10,10 @@ function send(response: ServerResponse, status: number, value: unknown): void {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "x-content-type-options": "nosniff",\n    "access-control-allow-origin": "*",\n    "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",\n    "access-control-allow-headers": "Authorization, Content-Type"
+    "x-content-type-options": "nosniff",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+    "access-control-allow-headers": "Authorization, Content-Type"
   });
   response.end(JSON.stringify(value));
 }
