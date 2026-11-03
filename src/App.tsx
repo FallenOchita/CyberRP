@@ -58,12 +58,24 @@ const demoServers: Server[] = [
   }
 ];
 
+function readStoredIds(key: string): string[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
+    return Array.isArray(value) && value.every((item) => typeof item === "string")
+      ? [...new Set(value)].slice(0, 50)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 type Page = "discover" | "recent" | "favorites" | "settings" | "owner";
 
 export default function App() {
   const [page, setPage] = useState<Page>("discover");
   const [query, setQuery] = useState("");
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => readStoredIds("cyberrp-favorites"));
+  const [recentServerIds, setRecentServerIds] = useState<string[]>(() => readStoredIds("cyberrp-recent-servers"));
   const [selected, setSelected] = useState<Server | null>(demoServers[0]);
   const [servers, setServers] = useState<Server[]>(demoServers);
   const [directoryMode, setDirectoryMode] = useState<"loading" | "live" | "demo">("loading");
@@ -142,7 +154,7 @@ export default function App() {
     const matchesQuery = directoryMode === "live" || `${server.name} ${server.description} ${server.region} ${server.mode}`
       .toLowerCase().includes(query.toLowerCase());
     if (page === "favorites") return matchesQuery && favorites.includes(server.id);
-    if (page === "recent") return matchesQuery && server.id === "night-city-life";
+    if (page === "recent") return matchesQuery && recentServerIds.includes(server.id);
     return matchesQuery;
   });
 
@@ -194,6 +206,11 @@ export default function App() {
     }
   };
 
+  const viewServer = (server: Server) => {
+    setSelected(server);
+    setRecentServerIds((current) => [server.id, ...current.filter((id) => id !== server.id)].slice(0, 20));
+  };
+
   const toggleFavorite = (id: string) => {
     setFavorites((current) => current.includes(id)
       ? current.filter((item) => item !== id)
@@ -207,7 +224,7 @@ export default function App() {
         <div className="nav-label">COMMUNITY</div>
         <nav>
           <button className={page === "discover" ? "nav-item active" : "nav-item"} onClick={() => setPage("discover")}><Compass size={18}/> Discover <span className="nav-count">03</span></button>
-          <button className={page === "recent" ? "nav-item active" : "nav-item"} onClick={() => setPage("recent")}><History size={18}/> Recently played</button>
+          <button className={page === "recent" ? "nav-item active" : "nav-item"} onClick={() => setPage("recent")}><History size={18}/> Recently viewed</button>
           <button className={page === "favorites" ? "nav-item active" : "nav-item"} onClick={() => setPage("favorites")}><Heart size={18}/> Favorites</button>\n          <button className={page === "owner" ? "nav-item active" : "nav-item"} onClick={() => setPage("owner")}><ShieldCheck size={18}/> Server management</button>
         </nav>
         <div className="sidebar-bottom">
@@ -229,7 +246,7 @@ export default function App() {
             </div>
             <div className="section-heading" id="server-browser"><div><div className="eyebrow">THE NETWORK</div><h2>{page === "favorites" ? "Your favorites" : page === "recent" ? "Recently played" : "Discover servers"}</h2></div><div className="server-total"><Activity size={15}/> {visibleServers.length} LISTED</div></div>
             <div className="browser-toolbar"><div className="search-box"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search servers, regions, or play styles..." /></div><button className="filter-button" onClick={() => setRefreshDirectory((value) => value + 1)} disabled={directoryMode === "loading"}><RefreshCw size={15}/> REFRESH</button></div>
-            <div className="server-layout"><div className="server-list">{directoryError && <div className="directory-notice">Directory unavailable — showing sample servers. {directoryError}</div>}{visibleServers.map((server) => <article className={selected?.id === server.id ? "server-card selected" : "server-card"} key={server.id} onClick={() => setSelected(server)}><div className="server-thumb"><span>NC</span><small>{server.mode.toUpperCase()}</small></div><div className="server-info"><div className="server-title-row"><h3>{server.name}</h3><button className={favorites.includes(server.id) ? "favorite-button saved" : "favorite-button"} aria-label="Toggle favorite" onClick={(event) => { event.stopPropagation(); toggleFavorite(server.id); }}><Heart size={17} fill={favorites.includes(server.id) ? "currentColor" : "none"}/></button></div><p>{server.description}</p><div className="server-meta"><span><span className={server.status === "online" ? "status-dot" : "status-dot offline"}/>{server.status === "online" ? "Online" : "Offline"}</span><span>{server.region}</span><span>{server.players}/{server.capacity} players</span></div></div><ChevronRight className="server-arrow" size={18}/></article>)}
+            <div className="server-layout"><div className="server-list">{directoryError && <div className="directory-notice">Directory unavailable — showing sample servers. {directoryError}</div>}{visibleServers.map((server) => <article className={selected?.id === server.id ? "server-card selected" : "server-card"} key={server.id} onClick={() => viewServer(server)}><div className="server-thumb"><span>NC</span><small>{server.mode.toUpperCase()}</small></div><div className="server-info"><div className="server-title-row"><h3>{server.name}</h3><button className={favorites.includes(server.id) ? "favorite-button saved" : "favorite-button"} aria-label="Toggle favorite" onClick={(event) => { event.stopPropagation(); toggleFavorite(server.id); }}><Heart size={17} fill={favorites.includes(server.id) ? "currentColor" : "none"}/></button></div><p>{server.description}</p><div className="server-meta"><span><span className={server.status === "online" ? "status-dot" : "status-dot offline"}/>{server.status === "online" ? "Online" : "Offline"}</span><span>{server.region}</span><span>{server.players}/{server.capacity} players</span></div></div><ChevronRight className="server-arrow" size={18}/></article>)}
               {visibleServers.length === 0 && <div className="empty-state">No servers match this view yet.</div>}
             </div>
             <aside className="detail-panel">{selected ? <><div className="detail-art"><span>CYBERRP COMMUNITY</span><b>{selected.name}</b></div><div className="detail-body"><div className="eyebrow">SERVER OVERVIEW</div><h3>{selected.name}</h3><p>{selected.description}</p>{selected.address && <p className="game-path">{selected.address}:{selected.port} · {selected.gameVersion}</p>}<div className="detail-stats"><div><strong>{selected.players}/{selected.capacity}</strong><small>PLAYERS</small></div><div><strong>{selected.region}</strong><small>REGION</small></div></div><div className="detail-rule"><ShieldCheck size={17}/><span>{acknowledgedRules.includes(selected.id) ? "Community rules acknowledged on this device." : "Review community rules before connecting."}</span></div><button className="filter-button rules-button" onClick={() => { setRulesServer(selected); setRuleChecked(false); }}><ShieldCheck size={15}/>{acknowledgedRules.includes(selected.id) ? "VIEW COMMUNITY RULES" : "REVIEW COMMUNITY RULES"}</button><button className="connect-button" disabled><Gamepad2 size={17}/> CONNECTION COMING SOON</button><small className="connect-note">{directoryMode === "live" ? `${selected.address ?? "Address unavailable"}:${selected.port ?? "—"} · Game ${selected.gameVersion ?? "unspecified"}` : "Sample listing only. Connect the directory API to load real server records."}</small></div></> : <div className="empty-state">Select a server to see its details.</div>}</aside></div>

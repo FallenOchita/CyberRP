@@ -3,7 +3,7 @@
 ## Milestone 0 — Foundation
 - [x] Create Electron + React + TypeScript application
 - [x] Add initial Night City-inspired launcher UI
-- [x] Add server discovery demo, search, favorites, recent view, and settings
+- [x] Add server discovery demo, search, persistent favorites, recently viewed servers, and settings
 - [x] Add secure renderer/preload boundary
 - [ ] Verify CI and Windows packaging
 
@@ -13,7 +13,7 @@
 - [x] Persist the selected game path in local launcher settings
 - [x] Add Play action with Steam routing and REDprelauncher/direct executable fallback
 - [ ] Add configurable launch arguments with validation
-- [ ] Persist local settings and favorites
+- [x] Persist selected game installation, favorites, and recently viewed servers
 - [x] Connect launcher to typed public directory API with explicit demo fallback
 
 ## Milestone 2 — Multi-language resource foundation
@@ -33,7 +33,7 @@
 
 ## Milestone 3 — Community services
 - [x] Server detail panel with community rule review and local acknowledgement
-- [ ] Account registration and secure session handling
+- [x] Invite-only owner/staff account provisioning and secure session handling
 - [ ] Character profiles and community identity
 - [x] Server owner dashboard and moderation roles\n- [x] Server-host registration CLI and protected credential configuration\n- [x] Owner dashboard host status, player count, and heartbeat monitoring
 - [x] Persist and display bounded server heartbeat history
