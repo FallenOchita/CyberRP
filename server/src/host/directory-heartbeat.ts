@@ -1,5 +1,3 @@
-import { setTimeout as delay } from "node:timers/promises";
-
 export type DirectoryHostAgentOptions = {
   directoryUrl: string;
   serverId: string;
@@ -54,8 +52,8 @@ export class DirectoryHeartbeatAgent {
 
   start(): void {
     if (this.timer) return;
-    void this.heartbeatNow();
-    this.timer = setInterval(() => { void this.heartbeatNow(); }, this.intervalMs);
+    void this.heartbeatNow().catch(() => undefined);
+    this.timer = setInterval(() => { void this.heartbeatNow().catch(() => undefined); }, this.intervalMs);
     this.timer.unref?.();
   }
 
