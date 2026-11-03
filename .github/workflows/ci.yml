@@ -50,3 +50,5 @@ jobs:
         run: npm run api:build
       - name: Test PostgreSQL registry
         run: npm run test:postgres
+      - name: Test server registration CLI
+        run: npm run test:registration
