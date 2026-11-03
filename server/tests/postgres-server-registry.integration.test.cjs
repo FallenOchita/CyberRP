@@ -3,6 +3,7 @@ const test = require("node:test");
 const { Pool } = require("pg");
 const { PostgresServerRegistry } = require("../../dist-server/server/src/api/postgres-server-registry.js");
 const { runMigrations } = require("../../dist-server/server/src/db/migrate.js");
+const { HeartbeatHistoryService } = require("../../dist-server/server/src/host/heartbeat-history.js");
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -54,6 +55,14 @@ test("PostgreSQL registry persists registrations and enforces server credentials
   const updated = await registry.heartbeat(created.server.id, created.credential, 3);
   assert.equal(updated.playerCount, 3);
   assert.equal(await registry.heartbeat(created.server.id, created.credential, 25), null);
+
+  const history = new HeartbeatHistoryService(pool);
+  await history.record(created.server.id, 3);
+  await history.record(created.server.id, 5);
+  const heartbeats = await history.list(created.server.id, 10);
+  assert.deepEqual(heartbeats.map(item => item.playerCount), [5, 3]);
+  assert.ok(heartbeats.every(item => Number.isFinite(Date.parse(item.receivedAt))));
+  assert.equal((await history.list(created.server.id, 1)).length, 1);
 
   assert.equal(await registry.remove(created.server.id, "incorrect-credential"), false);
   assert.equal(await registry.remove(created.server.id, created.credential), true);
