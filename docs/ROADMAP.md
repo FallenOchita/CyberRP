@@ -35,7 +35,7 @@
 - [x] Server detail panel with community rule review and local acknowledgement
 - [ ] Account registration and secure session handling
 - [ ] Character profiles and community identity
-- [ ] Server owner dashboard and moderation roles
+- [x] Server owner dashboard and moderation roles\n- [x] Server-host registration CLI and protected credential configuration\n- [x] Owner dashboard host status, player count, and heartbeat monitoring
 
 ## Milestone 3 — Mod/resource distribution
 - [ ] Versioned resource manifests and SHA-256 verification
