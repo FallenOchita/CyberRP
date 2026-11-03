@@ -161,6 +161,22 @@ export default function OwnerDashboard() {
     setNotice("You are signed out.");
   };
 
+  const historySeries = [...heartbeatHistory]
+    .filter(record => Number.isFinite(record.playerCount) && Number.isFinite(Date.parse(record.receivedAt)))
+    .sort((a, b) => Date.parse(a.receivedAt) - Date.parse(b.receivedAt));
+  const selectedCapacity = ownedServers.find(server => server.id === serverId)?.maxPlayers ?? 0;
+  const peakPlayers = historySeries.reduce((peak, record) => Math.max(peak, record.playerCount), 0);
+  const averagePlayers = historySeries.length
+    ? Math.round(historySeries.reduce((sum, record) => sum + record.playerCount, 0) / historySeries.length)
+    : 0;
+  const chartMax = Math.max(selectedCapacity, peakPlayers, 1);
+  const chartPoints = historySeries.map((record, index) => {
+    const x = historySeries.length === 1 ? 300 : 12 + (index / (historySeries.length - 1)) * 576;
+    const y = 124 - (record.playerCount / chartMax) * 108;
+    return { x, y, record };
+  });
+  const chartPolyline = chartPoints.map(point => `${point.x},${point.y}`).join(" ");
+
   return (
     <section className="content-area owner-dashboard">
       <div className="eyebrow">COMMUNITY CONTROL</div>
@@ -199,11 +215,29 @@ export default function OwnerDashboard() {
             <div className="owner-panel-title"><RefreshCw size={18}/><strong>Heartbeat history</strong><span className="owner-count">{heartbeatHistory.length} records</span></div>
             <p className="owner-help">Recent host check-ins and reported player counts. History is retained up to the latest 1,000 records per server.</p>
             <button type="button" className="status-refresh history-refresh" onClick={() => void loadHeartbeatHistory()} disabled={loadingHistory || !session}>{loadingHistory ? "LOADING..." : "REFRESH HISTORY"}</button>
-            {heartbeatHistory.length === 0 ? <p className="owner-help">No heartbeat history is available yet. A host must send a heartbeat after this feature is deployed.</p> :
-              <div className="heartbeat-history-list">{heartbeatHistory.map((record, index) => <div className="heartbeat-history-row" key={`${record.receivedAt}-${index}`}>
-                <span><strong>{record.playerCount}/{ownedServers.find(server => server.id === serverId)?.maxPlayers ?? "—"} players</strong><small>{new Date(record.receivedAt).toLocaleString()}</small></span>
+            {historySeries.length === 0 ? <p className="owner-help">No heartbeat history is available yet. A host must send a heartbeat after this feature is deployed.</p> : <>
+              <div className="heartbeat-summary">
+                <div><strong>{historySeries[historySeries.length - 1].record.playerCount}</strong><small>LATEST REPORTED</small></div>
+                <div><strong>{peakPlayers}</strong><small>RECENT PEAK</small></div>
+                <div><strong>{averagePlayers}</strong><small>AVERAGE</small></div>
+              </div>
+              <div className="heartbeat-chart-wrap">
+                <div className="heartbeat-chart-heading"><strong>PLAYER COUNT TREND</strong><small>OLDEST → NEWEST · {historySeries.length} SAMPLES</small></div>
+                <svg className="heartbeat-chart" viewBox="0 0 600 140" role="img" aria-label="Host-reported player count trend, oldest to newest">
+                  <line x1="12" y1="124" x2="588" y2="124" className="heartbeat-chart-axis"/>
+                  <line x1="12" y1="70" x2="588" y2="70" className="heartbeat-chart-grid"/>
+                  {chartPoints.length > 1 && <polyline points={chartPolyline} className="heartbeat-chart-line"/>}
+                  {chartPoints.map((point, index) => <circle key={`${point.record.receivedAt}-${index}`} cx={point.x} cy={point.y} r="3.5" className="heartbeat-chart-point">
+                    <title>{`${point.record.playerCount} players · ${new Date(point.record.receivedAt).toLocaleString()}`}</title>
+                  </circle>)}
+                </svg>
+                <div className="heartbeat-chart-labels"><span>{new Date(historySeries[0].record.receivedAt).toLocaleString()}</span><span>{new Date(historySeries[historySeries.length - 1].record.receivedAt).toLocaleString()}</span></div>
+              </div>
+              <div className="heartbeat-history-list">{[...heartbeatHistory].map((record, index) => <div className="heartbeat-history-row" key={`${record.receivedAt}-${index}`}>
+                <span><strong>{record.playerCount}/{selectedCapacity || "—"} players</strong><small>{new Date(record.receivedAt).toLocaleString()}</small></span>
                 <small className="server-online">RECEIVED</small>
-              </div>)}</div>}
+              </div>)}</div>
+            </>}
           </div>}
           {members.length > 0 && <div className="owner-panel">
             <div className="owner-panel-title"><Users size={18}/><strong>Staff members</strong><span className="owner-count">{members.length}</span></div>
