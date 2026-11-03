@@ -1,4 +1,4 @@
-import { open } from "node:fs/promises";
+import { open, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -33,48 +33,52 @@ export function validateRegistrationInput(input) {
 
 export async function registerServer(input, dependencies = {}) {
   const { directory, server } = validateRegistrationInput(input);
-  const fetcher = dependencies.fetcher ?? fetch;
+  if (typeof input.outputPath !== "string" || !input.outputPath.trim()) throw new Error("outputPath is required.");
   const outputPath = resolve(input.outputPath);
-  const response = await fetcher(new URL("/v1/servers", directory), {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.registrationKey}`,
-      "content-type": "application/json",
-      accept: "application/json"
-    },
-    body: JSON.stringify(server),
-    signal: AbortSignal.timeout(15_000)
-  });
-  if (!response.ok) {
-    const reason = response.status === 401 ? "The directory rejected the bootstrap key." :
-      response.status === 409 ? "The server registration conflicts with an existing record." :
-      `Directory registration failed (HTTP ${response.status}).`;
-    throw new Error(reason);
-  }
-  const payload = await response.json();
-  if (!payload || typeof payload !== "object" || !payload.server || typeof payload.server.id !== "string" ||
-      !/^[0-9a-f-]{36}$/i.test(payload.server.id) || typeof payload.credential !== "string" ||
-      payload.credential.length < 32 || payload.credential.length > 256) {
-    throw new Error("The directory returned an invalid registration response; no credential file was written.");
-  }
-
-  const config = {
-    directoryUrl: directory.origin,
-    serverId: payload.server.id,
-    credential: payload.credential,
-    server: payload.server,
-    createdAt: new Date().toISOString()
-  };
-  const file = await open(outputPath, input.force === true ? "w" : "wx", 0o600);
+  // Reserve the destination before contacting the API, so a duplicate path
+  // cannot create a server whose one-time credential has nowhere safe to go.
+  const file = await open(outputPath, "wx", 0o600);
+  let saved = false;
   try {
-    await file.writeFile(`${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8" });
+    const fetcher = dependencies.fetcher ?? fetch;
+    const response = await fetcher(new URL("/v1/servers", directory), {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${input.registrationKey}`,
+        "content-type": "application/json",
+        accept: "application/json"
+      },
+      body: JSON.stringify(server),
+      signal: AbortSignal.timeout(15_000)
+    });
+    if (!response.ok) {
+      const reason = response.status === 401 ? "The directory rejected the bootstrap key." :
+        response.status === 409 ? "The server registration conflicts with an existing record." :
+        `Directory registration failed (HTTP ${response.status}).`;
+      throw new Error(reason);
+    }
+    const payload = await response.json();
+    if (!payload || typeof payload !== "object" || !payload.server || typeof payload.server.id !== "string" ||
+        !/^[0-9a-f-]{36}$/i.test(payload.server.id) || typeof payload.credential !== "string" ||
+        payload.credential.length < 32 || payload.credential.length > 256) {
+      throw new Error("The directory returned an invalid registration response; no credential file was written.");
+    }
+
+    const config = {
+      directoryUrl: directory.origin,
+      serverId: payload.server.id,
+      credential: payload.credential,
+      server: payload.server,
+      createdAt: new Date().toISOString()
+    };
+    await file.writeFile(`${JSON.stringify(config, null, 2)}\\n`, { encoding: "utf8" });
     await file.chmod(0o600);
-  } catch (error) {
+    saved = true;
+    return { serverId: payload.server.id, outputPath };
+  } finally {
     await file.close();
-    throw error;
+    if (!saved) await rm(outputPath, { force: true });
   }
-  await file.close();
-  return { serverId: payload.server.id, outputPath };
 }
 
 function required(name) {
@@ -89,7 +93,6 @@ async function main() {
     directoryUrl: required("CYBERRP_DIRECTORY_URL"),
     registrationKey: required("CYBERRP_REGISTRATION_KEY"),
     outputPath: process.env.CYBERRP_SERVER_CONFIG ?? "./cyberrp-server-credentials.json",
-    force: process.argv.includes("--force"),
     server: {
       name: required("CYBERRP_SERVER_NAME"),
       description: process.env.CYBERRP_SERVER_DESCRIPTION ?? "",
