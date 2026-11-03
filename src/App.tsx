@@ -50,7 +50,7 @@ const demoServers: Server[] = [
   }
 ];
 
-type Page = "discover" | "recent" | "favorites" | "settings";
+type Page = "discover" | "recent" | "favorites" | "settings" | "owner";
 
 export default function App() {
   const [page, setPage] = useState<Page>("discover");
@@ -153,7 +153,7 @@ export default function App() {
         <nav>
           <button className={page === "discover" ? "nav-item active" : "nav-item"} onClick={() => setPage("discover")}><Compass size={18}/> Discover <span className="nav-count">03</span></button>
           <button className={page === "recent" ? "nav-item active" : "nav-item"} onClick={() => setPage("recent")}><History size={18}/> Recently played</button>
-          <button className={page === "favorites" ? "nav-item active" : "nav-item"} onClick={() => setPage("favorites")}><Heart size={18}/> Favorites</button>
+          <button className={page === "favorites" ? "nav-item active" : "nav-item"} onClick={() => setPage("favorites")}><Heart size={18}/> Favorites</button>\n          <button className={page === "owner" ? "nav-item active" : "nav-item"} onClick={() => setPage("owner")}><ShieldCheck size={18}/> Server management</button>
         </nav>
         <div className="sidebar-bottom">
           <div className="game-status"><div className={selectedGame ? "status-dot" : "status-dot offline"}/> <span>Cyberpunk 2077</span><small>{selectedGame ? "GAME INSTALLATION FOUND" : "GAME NOT DETECTED"}</small></div>
