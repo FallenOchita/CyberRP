@@ -147,42 +147,6 @@ export default function App() {
   });
 
 
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const result = await fetchDirectoryServers(query, controller.signal);
-        if (!active) return;
-        const mapped: Server[] = result.servers.map((item: DirectoryServer) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          region: item.tags.find((tag) => /north america|europe|asia|oceania|south america/i.test(tag)) ?? "Region not specified",
-          mode: item.tags.find((tag) => /serious|semi-serious|whitelist|casual|roleplay/i.test(tag)) ?? "Community",
-          players: item.playerCount,
-          capacity: item.maxPlayers,
-          status: item.status,
-          rules: [],
-          address: item.address,
-          port: item.port,
-          gameVersion: item.gameVersion
-        }));
-        setServers(mapped);
-        setDirectoryMode("live");
-        setDirectoryError(null);
-        setSelected((current) => mapped.find((item) => item.id === current?.id) ?? mapped[0] ?? null);
-      } catch (error) {
-        if (!active || controller.signal.aborted) return;
-        setServers(demoServers);
-        setDirectoryMode("demo");
-        setDirectoryError(error instanceof Error ? error.message : "Directory unavailable");
-        setSelected((current) => demoServers.find((item) => item.id === current?.id) ?? demoServers[0] ?? null);
-      }
-    }, 250);
-    return () => { active = false; window.clearTimeout(timer); controller.abort(); };
-  }, [query, refreshDirectory]);
-
   const scanForGame = async () => {
     if (!window.cyberrp) { setGameMessage("Run the desktop launcher to scan your PC."); return; }
     setCheckingGame(true);
