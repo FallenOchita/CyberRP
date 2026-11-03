@@ -51,7 +51,6 @@ export default function OwnerDashboard() {
   const loadMembers = async () => {
     if (!session || !serverId.trim()) return;
     setBusy(true);
-    setCreatedInvite(null);
     try {
       const result = await request<{ members: Member[] }>(`/v1/servers/${encodeURIComponent(serverId.trim())}/members`, session.token);
       setMembers(result.members);
