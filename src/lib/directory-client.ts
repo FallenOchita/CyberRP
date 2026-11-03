@@ -15,7 +15,7 @@ export type DirectoryServer = {
 
 type DirectoryResponse = { servers: DirectoryServer[]; storage?: "memory" | "postgres" };
 
-const DIRECTORY_URL = (import.meta.env.VITE_CYBERRP_DIRECTORY_URL ?? "http://127.0.0.1:8787").replace(/\\/$/, "");
+const DIRECTORY_URL = (import.meta.env.VITE_CYBERRP_DIRECTORY_URL ?? "http://127.0.0.1:8787").replace(/\/$/, "");
 
 export async function fetchDirectoryServers(search: string, signal?: AbortSignal): Promise<DirectoryResponse> {
   const url = new URL("/v1/servers", DIRECTORY_URL);
