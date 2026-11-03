@@ -240,7 +240,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       }
     }
 
-    const heartbeatHistoryRoute = /^\\/v1\\/servers\\/([0-9a-f-]{36})\\/heartbeats$/.exec(url.pathname);
+    const heartbeatHistoryRoute = /^\/v1\/servers\/([0-9a-f-]{36})\/heartbeats$/.exec(url.pathname);
     if (heartbeatHistoryRoute && request.method === "GET") {
       const token = bearer(request);
       const owner = token && options.ownerAuth ? await options.ownerAuth.authenticate(token) : null;
