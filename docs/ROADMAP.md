@@ -36,6 +36,7 @@
 - [ ] Account registration and secure session handling
 - [ ] Character profiles and community identity
 - [x] Server owner dashboard and moderation roles\n- [x] Server-host registration CLI and protected credential configuration\n- [x] Owner dashboard host status, player count, and heartbeat monitoring
+- [x] Persist and display bounded server heartbeat history
 
 ## Milestone 3 — Mod/resource distribution
 - [ ] Versioned resource manifests and SHA-256 verification
