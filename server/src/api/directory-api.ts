@@ -238,6 +238,17 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       }
     }
 
+    if (request.method === "GET" && url.pathname === "/v1/servers/mine") {
+      const token = bearer(request);
+      const owner = token && options.ownerAuth ? await options.ownerAuth.authenticate(token) : null;
+      if (!owner || !options.serverAccess) {
+        send(response, owner ? 503 : 401, { error: owner ? "server_access_unavailable" : "unauthorized" });
+        return;
+      }
+      send(response, 200, { servers: await options.serverAccess.listServers(owner.id) });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/v1/servers") {
       send(response, 200, {
         servers: await registry.list({ search: url.searchParams.get("search") ?? undefined, tag: url.searchParams.get("tag") ?? undefined }),

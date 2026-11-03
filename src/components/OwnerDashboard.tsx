@@ -3,6 +3,7 @@ import { Copy, LogIn, LogOut, MailPlus, RefreshCw, Shield, Users } from "lucide-
 
 type Owner = { id: string; email: string; createdAt: string };
 type Member = { ownerId: string; email: string; role: "owner" | "admin" | "moderator"; joinedAt: string };
+type OwnedServer = { id: string; name: string; address: string; port: number; playerCount: number; maxPlayers: number; status: "online" | "offline" };
 type Session = { owner: Owner; token: string; expiresAt: string };
 type Invitation = { invitation: { id: string; serverId: string; email: string; role: "admin" | "moderator"; expiresAt: string }; token: string };
 
@@ -28,6 +29,7 @@ export default function OwnerDashboard() {
   const [password, setPassword] = useState("");
   const [serverId, setServerId] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [ownedServers, setOwnedServers] = useState<OwnedServer[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "moderator">("moderator");
   const [createdInvite, setCreatedInvite] = useState<Invitation | null>(null);
@@ -42,7 +44,11 @@ export default function OwnerDashboard() {
       const result = await request<Session>("/v1/auth/login", undefined, { email, password }, "POST");
       setSession(result);
       setPassword("");
-      setNotice(`Signed in as ${result.owner.email}. Enter a server ID to manage its staff.`);
+      const owned = await request<{ servers: OwnedServer[] }>("/v1/servers/mine", result.token);
+      setOwnedServers(owned.servers);
+      setNotice(owned.servers.length
+        ? `Signed in. Found ${owned.servers.length} server(s) linked to your account.`
+        : "Signed in. No owned servers found yet; you can claim an unowned server using its ID.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Sign-in failed.");
     } finally { setBusy(false); }
@@ -51,7 +57,6 @@ export default function OwnerDashboard() {
   const loadMembers = async () => {
     if (!session || !serverId.trim()) return;
     setBusy(true);
-    setCreatedInvite(null);
     try {
       const result = await request<{ members: Member[] }>(`/v1/servers/${encodeURIComponent(serverId.trim())}/members`, session.token);
       setMembers(result.members);
@@ -108,6 +113,8 @@ export default function OwnerDashboard() {
     }
     setSession(null);
     setMembers([]);
+    setOwnedServers([]);
+    setServerId("");
     setCreatedInvite(null);
     setNotice("You are signed out.");
   };
@@ -131,7 +138,14 @@ export default function OwnerDashboard() {
         <>
           <div className="owner-panel">
             <div className="owner-panel-title"><Shield size={18}/><strong>Signed in</strong><span className="owner-role">{session.owner.email}</span></div>
-            <label>Server ID<input value={serverId} onChange={event => setServerId(event.target.value)} placeholder="Paste the server UUID"/></label>
+            {ownedServers.length > 0 && <div className="owned-server-list">
+              <div className="owned-server-heading">YOUR SERVERS</div>
+              {ownedServers.map(server => <button type="button" className={serverId === server.id ? "owned-server selected" : "owned-server"} key={server.id} onClick={() => { setServerId(server.id); setMembers([]); setCreatedInvite(null); }}>
+                <span><strong>{server.name}</strong><small>{server.address}:{server.port} · {server.playerCount}/{server.maxPlayers} players</small></span>
+                <small className={server.status === "online" ? "server-online" : "server-offline"}>{server.status.toUpperCase()}</small>
+              </button>)}
+            </div>}
+            <label>Server ID<input value={serverId} onChange={event => setServerId(event.target.value)} placeholder="Select a server above or paste its UUID"/></label>
             <div className="owner-actions">
               <button className="primary-button" onClick={loadMembers} disabled={busy || !serverId.trim()}><RefreshCw size={15}/> LOAD STAFF</button>
               <button className="filter-button" onClick={claimServer} disabled={busy || !serverId.trim()}>CLAIM UNOWNED SERVER</button>
