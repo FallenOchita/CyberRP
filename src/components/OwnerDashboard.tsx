@@ -4,6 +4,7 @@ import { Copy, LogIn, LogOut, MailPlus, RefreshCw, Shield, Users } from "lucide-
 type Owner = { id: string; email: string; createdAt: string };
 type Member = { ownerId: string; email: string; role: "owner" | "admin" | "moderator"; joinedAt: string };
 type OwnedServer = { id: string; name: string; address: string; port: number; playerCount: number; maxPlayers: number; status: "online" | "offline"; lastHeartbeatAt: string };
+type HeartbeatRecord = { playerCount: number; receivedAt: string };
 type Session = { owner: Owner; token: string; expiresAt: string };
 type Invitation = { invitation: { id: string; serverId: string; email: string; role: "admin" | "moderator"; expiresAt: string }; token: string };
 
@@ -37,6 +38,8 @@ export default function OwnerDashboard() {
   const [busy, setBusy] = useState(false);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [lastStatusRefresh, setLastStatusRefresh] = useState<string | null>(null);
+  const [heartbeatHistory, setHeartbeatHistory] = useState<HeartbeatRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const refreshOwnedServers = async (token: string, quiet = false) => {
     if (!quiet) setRefreshingStatus(true);
@@ -58,6 +61,20 @@ export default function OwnerDashboard() {
     }, 15_000);
     return () => window.clearInterval(timer);
   }, [session?.token]);
+
+  const loadHeartbeatHistory = async (id = serverId) => {
+    if (!session || !id.trim()) return;
+    setLoadingHistory(true);
+    try {
+      const result = await request<{ heartbeats: HeartbeatRecord[] }>(`/v1/servers/${encodeURIComponent(id.trim())}/heartbeats?limit=50`, session.token);
+      setHeartbeatHistory(result.heartbeats);
+    } catch (error) {
+      setHeartbeatHistory([]);
+      setNotice(error instanceof Error ? error.message : "Could not load heartbeat history.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const signIn = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -137,6 +154,7 @@ export default function OwnerDashboard() {
     setSession(null);
     setMembers([]);
     setOwnedServers([]);
+    setHeartbeatHistory([]);
     setLastStatusRefresh(null);
     setServerId("");
     setCreatedInvite(null);
@@ -165,7 +183,7 @@ export default function OwnerDashboard() {
             {ownedServers.length > 0 && <div className="owned-server-list">
               <div className="owned-server-heading">YOUR SERVERS <button type="button" className="status-refresh" onClick={() => session && void refreshOwnedServers(session.token)} disabled={refreshingStatus}><RefreshCw size={13}/>{refreshingStatus ? "UPDATING" : "REFRESH STATUS"}</button></div>
               <small className="status-refresh-time">{lastStatusRefresh ? `Directory refreshed ${new Date(lastStatusRefresh).toLocaleTimeString()}` : "Waiting for first status refresh"}</small>
-              {ownedServers.map(server => <button type="button" className={serverId === server.id ? "owned-server selected" : "owned-server"} key={server.id} onClick={() => { setServerId(server.id); setMembers([]); setCreatedInvite(null); }}>
+              {ownedServers.map(server => <button type="button" className={serverId === server.id ? "owned-server selected" : "owned-server"} key={server.id} onClick={() => { setServerId(server.id); setMembers([]); setCreatedInvite(null); setHeartbeatHistory([]); void loadHeartbeatHistory(server.id); }}>
                 <span><strong>{server.name}</strong><small>{server.address}:{server.port} · {server.playerCount}/{server.maxPlayers} players</small><small className="heartbeat-time">Last heartbeat: {new Date(server.lastHeartbeatAt).toLocaleString()}</small></span>
                 <small className={server.status === "online" ? "server-online" : "server-offline"}>{server.status.toUpperCase()}</small>
               </button>)}
@@ -177,6 +195,16 @@ export default function OwnerDashboard() {
             </div>
             <p className="owner-help">Claim only a server you own or operate. A server can have one owner; staff roles are managed separately.</p>
           </div>
+          {serverId.trim() && <div className="owner-panel">
+            <div className="owner-panel-title"><RefreshCw size={18}/><strong>Heartbeat history</strong><span className="owner-count">{heartbeatHistory.length} records</span></div>
+            <p className="owner-help">Recent host check-ins and reported player counts. History is retained up to the latest 1,000 records per server.</p>
+            <button type="button" className="status-refresh history-refresh" onClick={() => void loadHeartbeatHistory()} disabled={loadingHistory || !session}>{loadingHistory ? "LOADING..." : "REFRESH HISTORY"}</button>
+            {heartbeatHistory.length === 0 ? <p className="owner-help">No heartbeat history is available yet. A host must send a heartbeat after this feature is deployed.</p> :
+              <div className="heartbeat-history-list">{heartbeatHistory.map((record, index) => <div className="heartbeat-history-row" key={`${record.receivedAt}-${index}`}>
+                <span><strong>{record.playerCount}/{ownedServers.find(server => server.id === serverId)?.maxPlayers ?? "—"} players</strong><small>{new Date(record.receivedAt).toLocaleString()}</small></span>
+                <small className="server-online">RECEIVED</small>
+              </div>)}</div>}
+          </div>}
           {members.length > 0 && <div className="owner-panel">
             <div className="owner-panel-title"><Users size={18}/><strong>Staff members</strong><span className="owner-count">{members.length}</span></div>
             <div className="owner-members">{members.map(member => <div className="owner-member" key={member.ownerId}>
