@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import type { PublicServer } from "../api/server-registry";
 
 export type ServerRole = "owner" | "admin" | "moderator";
 export type ServerMember = { ownerId: string; email: string; role: ServerRole; joinedAt: string };
@@ -43,6 +44,29 @@ export class ServerAccessService {
     return result.rows[0]?.role ?? null;
   }
 
+  async listServers(ownerId: string): Promise<PublicServer[]> {
+    const result = await this.pool.query<{
+      id: string; name: string; description: string; address: string; port: number;
+      max_players: number; tags: string[]; game_version: string; player_count: number;
+      created_at: Date; last_heartbeat_at: Date;
+    }>(
+      `SELECT s.id, s.name, s.description, s.address, s.port, s.max_players, s.tags,
+              s.game_version, s.player_count, s.created_at, s.last_heartbeat_at
+       FROM cyberrp_servers s
+       JOIN cyberrp_server_members m ON m.server_id = s.id
+       WHERE m.owner_id = $1
+       ORDER BY s.name ASC`,
+      [ownerId]
+    );
+    return result.rows.map(row => ({
+      id: row.id, name: row.name, description: row.description, address: row.address,
+      port: row.port, maxPlayers: row.max_players, tags: row.tags,
+      gameVersion: row.game_version, playerCount: row.player_count,
+      status: Date.now() - row.last_heartbeat_at.getTime() <= 90_000 ? "online" : "offline",
+      createdAt: row.created_at.toISOString(), lastHeartbeatAt: row.last_heartbeat_at.toISOString()
+    }));
+  }
+
   async listMembers(serverId: string): Promise<ServerMember[]> {
     const result = await this.pool.query<{ owner_id: string; email: string; role: ServerRole; created_at: Date }>(
       `SELECT m.owner_id, o.email, m.role, m.created_at
@@ -52,10 +76,7 @@ export class ServerAccessService {
       [serverId]
     );
     return result.rows.map(row => ({
-      ownerId: row.owner_id,
-      email: row.email,
-      role: row.role,
-      joinedAt: row.created_at.toISOString()
+      ownerId: row.owner_id, email: row.email, role: row.role, joinedAt: row.created_at.toISOString()
     }));
   }
 
