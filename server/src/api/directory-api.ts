@@ -3,6 +3,7 @@ import { InMemoryServerRegistry, credentialsMatch, hashCredential, type ServerRe
 import type { OwnerAuthService } from "../auth/owner-auth.js";
 import type { ServerAccessService, ServerRole } from "../auth/server-access.js";
 import type { ServerInvitationService } from "../auth/server-invitations.js";
+import type { HeartbeatHistoryService } from "../host/heartbeat-history.js";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -79,6 +80,7 @@ export type DirectoryApiOptions = {
   ownerAuth?: OwnerAuthService;
   serverAccess?: ServerAccessService;
   invitations?: ServerInvitationService;
+  heartbeatHistory?: HeartbeatHistoryService;
 };
 
 export function createDirectoryApi(options: DirectoryApiOptions): { server: Server; registry: ServerRegistry } {
@@ -238,6 +240,29 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
       }
     }
 
+    const heartbeatHistoryRoute = /^\\/v1\\/servers\\/([0-9a-f-]{36})\\/heartbeats$/.exec(url.pathname);
+    if (heartbeatHistoryRoute && request.method === "GET") {
+      const token = bearer(request);
+      const owner = token && options.ownerAuth ? await options.ownerAuth.authenticate(token) : null;
+      if (!owner || !options.serverAccess) {
+        send(response, owner ? 503 : 401, { error: owner ? "server_access_unavailable" : "unauthorized" });
+        return;
+      }
+      const role = await options.serverAccess.role(heartbeatHistoryRoute[1], owner.id);
+      if (!role) {
+        send(response, 403, { error: "forbidden" });
+        return;
+      }
+      if (!options.heartbeatHistory) {
+        send(response, 503, { error: "heartbeat_history_unavailable" });
+        return;
+      }
+      const requestedLimit = Number(url.searchParams.get("limit") ?? "50");
+      const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, Math.trunc(requestedLimit))) : 50;
+      send(response, 200, { heartbeats: await options.heartbeatHistory.list(heartbeatHistoryRoute[1], limit) });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/v1/servers/mine") {
       const token = bearer(request);
       const owner = token && options.ownerAuth ? await options.ownerAuth.authenticate(token) : null;
@@ -287,6 +312,7 @@ export function createDirectoryApi(options: DirectoryApiOptions): { server: Serv
           send(response, 404, { error: "server_not_found" });
           return;
         }
+        await options.heartbeatHistory?.record(match[1], updated.playerCount);
         send(response, 200, { server: updated });
       } catch {
         send(response, 400, { error: "invalid_request" });
@@ -327,6 +353,7 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
     let ownerAuth: OwnerAuthService | undefined;
     let serverAccess: ServerAccessService | undefined;
     let invitations: ServerInvitationService | undefined;
+    let heartbeatHistory: HeartbeatHistoryService | undefined;
 
     if (databaseUrl) {
       const { Pool } = await import("pg");
@@ -343,10 +370,12 @@ if (process.env.CYBERRP_REGISTRATION_KEY && process.env.CYBERRP_API_AUTOSTART ==
       serverAccess = new ServerAccessService(pool);
       const { ServerInvitationService } = await import("../auth/server-invitations.js");
       invitations = new ServerInvitationService(pool);
+      const { HeartbeatHistoryService } = await import("../host/heartbeat-history.js");
+      heartbeatHistory = new HeartbeatHistoryService(pool);
       storageMode = "postgres";
     }
 
-    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth, serverAccess, invitations });
+    const { server } = createDirectoryApi({ registrationKey, registry, storageMode, ownerAuth, serverAccess, invitations, heartbeatHistory });
     server.on("close", () => { void pool?.end(); });
     server.listen(port, "0.0.0.0", () => {
       process.stdout.write(`CyberRP directory API listening on port ${port} (${storageMode} registry).\\n`);
