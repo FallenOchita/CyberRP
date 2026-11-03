@@ -13,3 +13,20 @@
 
 
 .history-refresh{min-height:32px;cursor:pointer;justify-self:start;margin:2px 0 10px}.heartbeat-history-list{display:grid}.heartbeat-history-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #292a33}.heartbeat-history-row strong,.heartbeat-history-row span small{display:block}.heartbeat-history-row strong{font-size:10px}.heartbeat-history-row span small{font-size:9px;color:#858691;margin-top:4px}.heartbeat-history-row>small{font-size:8px;font-weight:800;letter-spacing:1px}
+
+
+.heartbeat-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0;padding:12px;background:#101116;border:1px solid #292a33;border-radius:4px}
+.heartbeat-summary div{display:grid;gap:5px}
+.heartbeat-summary strong{font-size:20px;color:#f2f2f4;font-variant-numeric:tabular-nums}
+.heartbeat-summary small,.heartbeat-chart-heading small{font-size:8px;color:#858691;letter-spacing:.8px}
+.heartbeat-chart-wrap{margin:12px 0 16px;padding:12px;background:#101116;border:1px solid #292a33;border-radius:4px}
+.heartbeat-chart-heading{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.heartbeat-chart-heading strong{font-size:9px;letter-spacing:1px;color:#c8c8d0}
+.heartbeat-chart{display:block;width:100%;height:auto;margin-top:10px;overflow:visible}
+.heartbeat-chart-axis,.heartbeat-chart-grid{stroke:#34353e;stroke-width:1}
+.heartbeat-chart-grid{stroke-dasharray:3 5}
+.heartbeat-chart-line{fill:none;stroke:#ed5263;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.heartbeat-chart-point{fill:#f4a0a8;stroke:#14151b;stroke-width:1.5}
+.heartbeat-chart-labels{display:flex;justify-content:space-between;gap:12px;color:#777985;font-size:8px}
+.heartbeat-chart-labels span:last-child{text-align:right}
+@media(max-width:560px){.heartbeat-summary strong{font-size:16px}.heartbeat-chart-heading{align-items:flex-start;flex-direction:column}.heartbeat-chart-labels{font-size:7px}}
