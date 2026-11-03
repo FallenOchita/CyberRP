@@ -27,11 +27,7 @@ $env:CYBERRP_SERVER_CONFIG = "$env:LOCALAPPDATA\CyberRP\server-host.json"
 npm run api:register
 ```
 
-The command refuses to overwrite an existing configuration file. Use `-- --force` only when intentionally replacing it:
-
-```powershell
-npm run api:register -- --force
-```
+The command refuses to overwrite an existing configuration file. Choose a new output path when registering a different host. It reserves the destination before sending the registration request, so an existing file is detected before a server is created.
 
 On success, the CLI prints the server ID and file path, but never prints the raw host credential. The output file is created with owner-only permissions where supported. Restrict access to this file, back it up securely, and do not commit it. The directory stores only a hash of the credential.
 
