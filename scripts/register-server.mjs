@@ -71,7 +71,7 @@ export async function registerServer(input, dependencies = {}) {
       server: payload.server,
       createdAt: new Date().toISOString()
     };
-    await file.writeFile(`${JSON.stringify(config, null, 2)}\\n`, { encoding: "utf8" });
+    await file.writeFile(`${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8" });
     await file.chmod(0o600);
     saved = true;
     return { serverId: payload.server.id, outputPath };
