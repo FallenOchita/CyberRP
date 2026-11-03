@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Activity, ChevronRight, Compass, Gamepad2, Globe2,
-  Heart, History, RefreshCw, Search, Settings, ShieldCheck, Users, Wifi
+  Heart, History, RefreshCw, Search, Settings, ShieldCheck, Wifi
 } from "lucide-react";
 import { fetchDirectoryServers, type DirectoryServer } from "./lib/directory-client";
 
@@ -13,7 +13,7 @@ type Server = {
   mode: string;
   players: number;
   capacity: number;
-  status: "online" | "offline";
+  status: "online" | "offline" | "maintenance";
   address?: string;
   port?: number;
   gameVersion?: string;
