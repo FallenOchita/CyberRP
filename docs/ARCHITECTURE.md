@@ -6,7 +6,8 @@
 - **Preload:** Exposes a minimal typed API through `contextBridge`.
 - **Main process:** Owns Electron window lifecycle, local settings persistence, game validation, and game launch operations.
 - **Game launch:** Steam installs are handed to Steam using Cyberpunk 2077's app ID; other supported installs prefer CD PROJEKT RED's REDprelauncher when available, then use the validated game executable.
-- **Directory data:** Currently static demo fixtures in the renderer. A future API client will replace these fixtures.
+- **Directory data:** A typed API client loads live directory records and falls back explicitly to sample listings when the API is unavailable.
+- **Local preferences:** The main process persists the validated game installation; the renderer persists favorites, recently viewed server IDs, and local rule acknowledgements.
 
 ## Resource runtime architecture
 
@@ -21,10 +22,10 @@ The repository contains the manifest contract, schema, catalog discovery functio
 
 ## Planned services
 
-1. Public directory API: initial in-memory server registration, listings, heartbeats, and removal are implemented; PostgreSQL persistence, rate limiting, and production deployment controls remain outstanding.
-2. Identity API: account registration, sessions, and player profiles.
+1. Public directory API: PostgreSQL-backed server registration, listings, heartbeats, owner access, and bounded heartbeat history are implemented; rate limiting and production deployment controls remain outstanding.
+2. Identity API: invite-only owner/staff provisioning and hashed bearer sessions are implemented; player profiles and community identity remain outstanding.
 3. Resource service: versioned manifests, hashes, and download metadata.
-4. Admin API: authenticated server-owner management.
+4. Admin API: authenticated server-owner and staff management is implemented.
 
 ## Multiplayer reality check
 
