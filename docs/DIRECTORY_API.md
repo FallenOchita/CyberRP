@@ -151,6 +151,6 @@ The desktop launcher includes a **Server management** page for signing in, claim
 VITE_CYBERRP_API_URL=https://directory.example.com npm run build
 ```
 
-When unset, the dashboard uses `http://127.0.0.1:8787` for local development. The API permits cross-origin requests for the desktop renderer; authentication uses explicit bearer headers, not browser cookies. Keep the API behind HTTPS before using owner accounts outside a local development environment. The current dashboard keeps the session token in memory only, so signing out or restarting the launcher requires signing in again.
+When unset, the dashboard uses `http://127.0.0.1:8787` for local development. The API permits cross-origin requests for the desktop renderer; authentication uses explicit bearer headers, not browser cookies. Keep the API behind HTTPS before using owner accounts outside a local development environment. The dashboard keeps the session token in memory only, so signing out or restarting the launcher requires signing in again. After sign-in, it automatically discovers servers linked to the account through `GET /v1/servers/mine`.
 
-The dashboard requires PostgreSQL-backed owner authentication and migrations 002–004. It currently accepts a server UUID copied from the directory/hosting setup; automatic discovery of servers owned by the signed-in account is a follow-up.
+The dashboard requires PostgreSQL-backed owner authentication and migrations 002–004. Manual UUID entry remains available for claiming an unowned server.
