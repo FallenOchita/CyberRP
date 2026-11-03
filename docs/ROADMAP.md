@@ -14,7 +14,7 @@
 - [x] Add Play action with Steam routing and REDprelauncher/direct executable fallback
 - [ ] Add configurable launch arguments with validation
 - [ ] Persist local settings and favorites
-- [ ] Replace demo servers with a typed directory API
+- [x] Connect launcher to typed public directory API with explicit demo fallback
 
 ## Milestone 2 — Multi-language resource foundation
 - [x] Define a versioned resource manifest shared by C#, JavaScript, and Lua
